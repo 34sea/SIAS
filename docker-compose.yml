@@ -37,6 +37,14 @@ services:
       - PORT=3000
     depends_on:
       - backend
+  
+  analysis:
+    build: ./analysis
+    container_name: python_analysis
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./analysis:/app
 
 volumes:
   mysql_data:
