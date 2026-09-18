@@ -6,7 +6,7 @@ const options = {
     info: {
       title: 'User & RBAC API',
       version: '1.0.0',
-      description: 'API com Autenticação JWT e RBAC'
+      description: 'Sistema inteligente para análise de similaridade'
     },
     servers: [
       {
@@ -29,7 +29,7 @@ const options = {
       }
     ]
   },
-  apis: ['./src/routes/*.js']
+  apis: ['./src/routes/*.js', './src/controllers/*.js']
 };
 
 const swaggerSpec = swaggerJSDoc(options);
