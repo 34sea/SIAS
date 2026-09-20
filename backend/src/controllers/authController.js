@@ -55,28 +55,28 @@ const { signToken } = require('../utils/jwt');
  *       type: object
  *       required:
  *         - identificador
- *         - palavra_passe
+ *         - password_hash
  *       properties:
  *         identificador:
  *           type: string
  *           description: Email ou username do utilizador
- *           example: "estudante@email.com"
- *         palavra_passe:
+ *           example: "admin@similaridade.co.mz"
+ *         password_hash:
  *           type: string
  *           format: password
- *           example: "123456"
+ *           example: "Admin@123456"
  *
  *     ChangePasswordRequest:
  *       type: object
  *       required:
- *         - palavra_passe_actual
- *         - nova_palavra_passe
+ *         - password_hash_actual
+ *         - nova_password_hash
  *       properties:
- *         palavra_passe_actual:
+ *         password_hash_actual:
  *           type: string
  *           format: password
  *           example: "123456"
- *         nova_palavra_passe:
+ *         nova_password_hash:
  *           type: string
  *           format: password
  *           example: "NovaSenha123"
@@ -148,9 +148,9 @@ const { signToken } = require('../utils/jwt');
  */
 const login = async (req, res, next) => {
     try {
-        const { identificador, palavra_passe } = req.body;
+        const { identificador, password_hash } = req.body;
 
-        if (!identificador || !palavra_passe) {
+        if (!identificador || !password_hash) {
             return res.status(400).json({
                 success: false,
                 message: 'O identificador e a palavra-passe são obrigatórios.'
@@ -164,9 +164,9 @@ const login = async (req, res, next) => {
                 u.nome_completo,
                 u.email,
                 u.username,
-                u.palavra_passe,
+                u.password_hash,
                 u.role_id,
-                u.estado,
+                u.ativo,
                 u.foto,
                 r.nome AS role_nome
             FROM utilizadores u
@@ -187,7 +187,7 @@ const login = async (req, res, next) => {
 
         const utilizador = utilizadores[0];
 
-        if (utilizador.estado !== 'ACTIVO') {
+        if (!utilizador.ativo) {
             return res.status(403).json({
                 success: false,
                 message: 'A sua conta encontra-se inactiva.'
@@ -195,8 +195,8 @@ const login = async (req, res, next) => {
         }
 
         const palavraPasseValida = await bcrypt.compare(
-            palavra_passe,
-            utilizador.palavra_passe
+            password_hash,
+            utilizador.password_hash
         );
 
         if (!palavraPasseValida) {
@@ -217,7 +217,7 @@ const login = async (req, res, next) => {
 
         const token = signToken(payload);
 
-        delete utilizador.palavra_passe;
+        delete utilizador.password_hash;
 
         return res.status(200).json({
             success: true,
@@ -272,7 +272,7 @@ const me = async (req, res, next) => {
                 u.username,
                 u.role_id,
                 r.nome AS role_nome,
-                u.estado,
+                u.ativo,
                 u.foto,
                 u.data_criacao,
                 u.data_actualizacao
@@ -345,18 +345,18 @@ const changePassword = async (req, res, next) => {
         const utilizadorId = req.user.id;
 
         const {
-            palavra_passe_actual,
-            nova_palavra_passe
+            password_hash_actual,
+            nova_password_hash
         } = req.body;
 
-        if (!palavra_passe_actual || !nova_palavra_passe) {
+        if (!password_hash_actual || !nova_password_hash) {
             return res.status(400).json({
                 success: false,
                 message: 'A palavra-passe actual e a nova palavra-passe são obrigatórias.'
             });
         }
 
-        if (nova_palavra_passe.length < 6) {
+        if (nova_password_hash.length < 6) {
             return res.status(400).json({
                 success: false,
                 message: 'A nova palavra-passe deve conter pelo menos 6 caracteres.'
@@ -365,7 +365,7 @@ const changePassword = async (req, res, next) => {
 
         const [utilizadores] = await pool.query(
             `
-            SELECT id, palavra_passe
+            SELECT id, password_hash
             FROM utilizadores
             WHERE id = ?
             LIMIT 1
@@ -381,8 +381,8 @@ const changePassword = async (req, res, next) => {
         }
 
         const palavraPasseValida = await bcrypt.compare(
-            palavra_passe_actual,
-            utilizadores[0].palavra_passe
+            password_hash_actual,
+            utilizadores[0].password_hash
         );
 
         if (!palavraPasseValida) {
@@ -393,14 +393,14 @@ const changePassword = async (req, res, next) => {
         }
 
         const novaPalavraPasseHash = await bcrypt.hash(
-            nova_palavra_passe,
+            nova_password_hash,
             12
         );
 
         await pool.query(
             `
             UPDATE utilizadores
-            SET palavra_passe = ?,
+            SET password_hash = ?,
                 data_actualizacao = CURRENT_TIMESTAMP
             WHERE id = ?
             `,

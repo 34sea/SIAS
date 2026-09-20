@@ -174,6 +174,8 @@ CREATE TABLE utilizadores (
     INDEX idx_utilizadores_ativo (ativo)
 ) ENGINE=InnoDB;
 
+ALTER TABLE utilizadores ADD COLUMN foto VARCHAR(255) NOT NULL DEFAULT '' AFTER ativo;
+
 
 -- ============================================================
 -- 6. DOCENTES

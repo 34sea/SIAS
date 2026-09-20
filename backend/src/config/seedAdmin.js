@@ -88,11 +88,11 @@ const createAdmin = async () => {
                 nome_completo,
                 email,
                 username,
-                palavra_passe,
+                password_hash,
                 role_id,
                 estado
             )
-            VALUES (?, ?, ?, ?, ?, 'ACTIVO')
+            VALUES (?, ?, ?, ?, ?, '1')
             `,
             [
                 nome,

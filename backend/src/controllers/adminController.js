@@ -2,8 +2,23 @@ const bcrypt = require('bcryptjs');
 const pool = require('../config/db');
 
 const createAdmin = async (req, res) => {
+
+    console.log('');
+    console.log('======================================');
+    console.log('>>> CREATE ADMIN CONTROLLER');
+    console.log('======================================');
+    console.log('Método:', req.method);
+    console.log('URL:', req.originalUrl);
+    console.log('IP:', req.ip);
+    console.log('User-Agent:', req.headers['user-agent']);
+    console.log('Body:', req.body);
+    console.log('User:', req.user || 'SEM AUTENTICAÇÃO');
+    console.log('======================================');
+
     try {
-        // Verificar se já existe o role ADMIN
+
+        console.log('>>> Verificando role ADMIN...');
+
         const [roles] = await pool.query(
             `
             SELECT id
@@ -13,7 +28,12 @@ const createAdmin = async (req, res) => {
             `
         );
 
+        console.log('>>> Roles encontradas:', roles.length);
+
         if (roles.length === 0) {
+
+            console.log('❌ Role ADMIN não encontrada');
+
             return res.status(500).json({
                 success: false,
                 message: 'O role ADMIN não existe na tabela roles.'
@@ -22,6 +42,7 @@ const createAdmin = async (req, res) => {
 
         const adminRoleId = roles[0].id;
 
+        console.log('>>> ADMIN role ID:', adminRoleId);
         // Verificar se já existe um administrador
         const [admins] = await pool.query(
             `
@@ -75,25 +96,25 @@ const createAdmin = async (req, res) => {
             12
         );
 
-        // Criar administrador
         const [resultado] = await pool.query(
             `
             INSERT INTO utilizadores (
                 nome_completo,
                 email,
                 username,
-                palavra_passe,
+                password_hash,
                 role_id,
-                estado
+                ativo
             )
-            VALUES (?, ?, ?, ?, ?, 'ACTIVO')
+            VALUES (?, ?, ?, ?, ?, ?)
             `,
             [
                 nome,
                 email,
                 username,
                 palavraPasseHash,
-                adminRoleId
+                adminRoleId,
+                1 
             ]
         );
 
@@ -105,7 +126,7 @@ const createAdmin = async (req, res) => {
                 nome_completo: nome,
                 username,
                 email,
-                palavra_passe: palavraPasse
+                password_hash: palavraPasse
             }
         });
 
