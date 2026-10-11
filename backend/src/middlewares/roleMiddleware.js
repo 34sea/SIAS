@@ -11,6 +11,7 @@ const roleMiddleware = (...rolesPermitidos) => {
             }
 
             const role = req.user.role_nome || req.user.role;
+            console.log(`Role name students: ${role}`)
 
             if (!role) {
                 return res.status(403).json({

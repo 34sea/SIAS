@@ -5,6 +5,7 @@ const swaggerSpec = require('./config/swagger');
 const userRoutes = require('./routes/userRoutes');
 const productRoutes = require('./routes/productRoutes');
 const documentRoutes = require('./routes/documentRoutes');
+const monografiaRoutes = require('./routes/monografiaRoutes');
 const roleRoutes = require('./routes/roleRoutes');
 const permissionRoutes = require('./routes/permissionRoutes');
 const authRoutes = require('./routes/authRoutes');
@@ -60,6 +61,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/permissoes', permissionRoutes);
+app.use('/api/moonograph', monografiaRoutes);
 
 app.use('/api', productRoutes); 
 app.use('/api', documentRoutes);
