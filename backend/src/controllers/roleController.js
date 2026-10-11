@@ -3,6 +3,50 @@ const pool = require('../config/db');
 /**
  * Listar todos os perfis
  */
+/**
+ * @swagger
+ * /api/roles:
+ *   get:
+ *     summary: Listar todos os perfis
+ *     description: Lista os perfis registados no sistema.
+ *     tags: [Perfis]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de perfis obtida com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 total:
+ *                   type: integer
+ *                   example: 2
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         example: 1
+ *                       nome:
+ *                         type: string
+ *                         example: ADMIN
+ *                       descricao:
+ *                         type: string
+ *                         nullable: true
+ *                         example: Administrador do sistema
+ *                       criado_em:
+ *                         type: string
+ *                         format: date-time
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ */
 const getRoles = async (req, res, next) => {
     try {
         const [roles] = await pool.query(
@@ -11,9 +55,7 @@ const getRoles = async (req, res, next) => {
                 id,
                 nome,
                 descricao,
-                estado,
-                data_criacao,
-                data_actualizacao
+                criado_em
             FROM roles
             ORDER BY nome ASC
             `
@@ -32,6 +74,55 @@ const getRoles = async (req, res, next) => {
 /**
  * Obter perfil por ID
  */
+/**
+ * @swagger
+ * /api/roles/{id}:
+ *   get:
+ *     summary: Obter perfil por ID
+ *     description: Obtém os detalhes de um perfil específico.
+ *     tags: [Perfis]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do perfil.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Perfil encontrado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     nome:
+ *                       type: string
+ *                       example: ADMIN
+ *                     descricao:
+ *                       type: string
+ *                       nullable: true
+ *                       example: Administrador do sistema
+ *                     criado_em:
+ *                       type: string
+ *                       format: date-time
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Perfil não encontrado.
+ */
 const getRoleById = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -42,9 +133,7 @@ const getRoleById = async (req, res, next) => {
                 id,
                 nome,
                 descricao,
-                estado,
-                data_criacao,
-                data_actualizacao
+                criado_em
             FROM roles
             WHERE id = ?
             LIMIT 1
@@ -70,6 +159,70 @@ const getRoleById = async (req, res, next) => {
 
 /**
  * Criar perfil
+ */
+/**
+ * @swagger
+ * /api/roles:
+ *   post:
+ *     summary: Criar perfil
+ *     description: Regista um novo perfil no sistema. O nome é obrigatório.
+ *     tags: [Perfis]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - nome
+ *             properties:
+ *               nome:
+ *                 type: string
+ *                 description: Nome único do perfil.
+ *                 example: GESTOR
+ *               descricao:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Descrição do perfil.
+ *                 example: Gestor de operações
+ *     responses:
+ *       201:
+ *         description: Perfil criado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Perfil criado com sucesso.
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     nome:
+ *                       type: string
+ *                       example: GESTOR
+ *                     descricao:
+ *                       type: string
+ *                       nullable: true
+ *                       example: Gestor de operações
+ *                     criado_em:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: O nome do perfil é obrigatório.
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       409:
+ *         description: Já existe um perfil com este nome.
  */
 const createRole = async (req, res, next) => {
     try {
@@ -106,10 +259,9 @@ const createRole = async (req, res, next) => {
             `
             INSERT INTO roles (
                 nome,
-                descricao,
-                estado
+                descricao
             )
-            VALUES (?, ?, 'ACTIVO')
+            VALUES (?, ?)
             `,
             [
                 nome,
@@ -123,8 +275,7 @@ const createRole = async (req, res, next) => {
                 id,
                 nome,
                 descricao,
-                estado,
-                data_criacao
+                criado_em
             FROM roles
             WHERE id = ?
             `,
@@ -144,14 +295,80 @@ const createRole = async (req, res, next) => {
 /**
  * Actualizar perfil
  */
+/**
+ * @swagger
+ * /api/roles/{id}:
+ *   put:
+ *     summary: Actualizar perfil
+ *     description: Actualiza os dados de um perfil existente. Apenas os campos enviados serão alterados.
+ *     tags: [Perfis]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do perfil a actualizar.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nome:
+ *                 type: string
+ *                 example: GESTOR_SENIOR
+ *               descricao:
+ *                 type: string
+ *                 nullable: true
+ *                 example: Gestor sénior de operações
+ *     responses:
+ *       200:
+ *         description: Perfil actualizado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Perfil actualizado com sucesso.
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     nome:
+ *                       type: string
+ *                       example: GESTOR_SENIOR
+ *                     descricao:
+ *                       type: string
+ *                       nullable: true
+ *                     criado_em:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Nenhum campo enviado para actualização.
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Perfil não encontrado.
+ */
 const updateRole = async (req, res, next) => {
     try {
         const { id } = req.params;
 
         const {
             nome,
-            descricao,
-            estado
+            descricao
         } = req.body;
 
         const [existente] = await pool.query(
@@ -184,28 +401,12 @@ const updateRole = async (req, res, next) => {
             valores.push(descricao);
         }
 
-        if (estado !== undefined) {
-            if (!['ACTIVO', 'INACTIVO'].includes(estado)) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Estado inválido.'
-                });
-            }
-
-            campos.push('estado = ?');
-            valores.push(estado);
-        }
-
         if (campos.length === 0) {
             return res.status(400).json({
                 success: false,
                 message: 'Nenhum campo foi enviado para actualização.'
             });
         }
-
-        campos.push(
-            'data_actualizacao = CURRENT_TIMESTAMP'
-        );
 
         valores.push(id);
 
@@ -224,9 +425,7 @@ const updateRole = async (req, res, next) => {
                 id,
                 nome,
                 descricao,
-                estado,
-                data_criacao,
-                data_actualizacao
+                criado_em
             FROM roles
             WHERE id = ?
             `,
@@ -244,21 +443,40 @@ const updateRole = async (req, res, next) => {
 };
 
 /**
- * Activar/desactivar perfil
+ * Eliminar perfil
  */
-const updateRoleStatus = async (req, res, next) => {
+/**
+ * @swagger
+ * /api/roles/{id}:
+ *   delete:
+ *     summary: Eliminar perfil
+ *     description: Elimina um perfil existente pelo seu ID.
+ *     tags: [Perfis]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do perfil a eliminar.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Perfil eliminado com sucesso.
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Perfil não encontrado.
+ *       500:
+ *         description: Erro interno do servidor.
+ */
+const deleteRole = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { estado } = req.body;
 
-        if (!['ACTIVO', 'INACTIVO'].includes(estado)) {
-            return res.status(400).json({
-                success: false,
-                message: 'O estado deve ser ACTIVO ou INACTIVO.'
-            });
-        }
-
-        const [role] = await pool.query(
+        const [existente] = await pool.query(
             `
             SELECT id
             FROM roles
@@ -268,7 +486,7 @@ const updateRoleStatus = async (req, res, next) => {
             [id]
         );
 
-        if (role.length === 0) {
+        if (existente.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: 'Perfil não encontrado.'
@@ -277,25 +495,89 @@ const updateRoleStatus = async (req, res, next) => {
 
         await pool.query(
             `
-            UPDATE roles
-            SET estado = ?,
-                data_actualizacao = CURRENT_TIMESTAMP
+            DELETE FROM roles
             WHERE id = ?
             `,
-            [estado, id]
+            [id]
         );
 
         return res.status(200).json({
             success: true,
-            message: `Perfil ${estado === 'ACTIVO' ? 'activado' : 'desactivado'} com sucesso.`
+            message: 'Perfil eliminado com sucesso.'
         });
     } catch (error) {
         next(error);
     }
 };
-
 /**
  * Listar permissões de um perfil
+ */
+/**
+ * @swagger
+ * /api/roles/{id}/permissoes:
+ *   get:
+ *     summary: Listar permissões de um perfil
+ *     description: Lista todas as permissões associadas a um perfil específico.
+ *     tags: [Perfis]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do perfil.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Lista de permissões do perfil obtida com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     role:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: integer
+ *                           example: 1
+ *                         nome:
+ *                           type: string
+ *                           example: ADMIN
+ *                         descricao:
+ *                           type: string
+ *                           nullable: true
+ *                           example: Administrador do sistema
+ *                     permissoes:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                             example: 1
+ *                           nome:
+ *                             type: string
+ *                             example: UTILIZADORES_VISUALIZAR
+ *                           descricao:
+ *                             type: string
+ *                             nullable: true
+ *                             example: Visualizar utilizadores
+ *                           criado_em:
+ *                             type: string
+ *                             format: date-time
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Perfil não encontrado.
  */
 const getRolePermissions = async (req, res, next) => {
     try {
@@ -303,7 +585,7 @@ const getRolePermissions = async (req, res, next) => {
 
         const [role] = await pool.query(
             `
-            SELECT id, nome, descricao, estado
+            SELECT id, nome, descricao
             FROM roles
             WHERE id = ?
             LIMIT 1
@@ -322,16 +604,14 @@ const getRolePermissions = async (req, res, next) => {
             `
             SELECT
                 p.id,
-                p.codigo,
                 p.nome,
                 p.descricao,
-                p.modulo,
-                p.estado
+                p.criado_em
             FROM permissoes p
             INNER JOIN role_permissoes rp
                 ON rp.permissao_id = p.id
             WHERE rp.role_id = ?
-            ORDER BY p.modulo ASC, p.nome ASC
+            ORDER BY p.nome ASC
             `,
             [id]
         );
@@ -350,6 +630,59 @@ const getRolePermissions = async (req, res, next) => {
 
 /**
  * Associar permissões a um perfil
+ */
+/**
+ * @swagger
+ * /api/roles/{id}/permissoes:
+ *   put:
+ *     summary: Associar permissões a um perfil
+ *     description: Substitui ou define a lista de permissões associadas a um perfil específico.
+ *     tags: [Perfis]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do perfil.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - permissao_ids
+ *             properties:
+ *               permissao_ids:
+ *                 type: array
+ *                 description: Lista de IDs das permissões a associar.
+ *                 items:
+ *                   type: integer
+ *                 example: [1, 2, 3]
+ *     responses:
+ *       200:
+ *         description: Permissões do perfil actualizadas com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Permissões do perfil actualizadas com sucesso.
+ *       400:
+ *         description: Formato inválido ou IDs de permissões inexistentes.
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Perfil não encontrado.
  */
 const assignRolePermissions = async (req, res, next) => {
     const connection = await pool.getConnection();
@@ -396,7 +729,6 @@ const assignRolePermissions = async (req, res, next) => {
                 SELECT id
                 FROM permissoes
                 WHERE id IN (${placeholders})
-                  AND estado = 'ACTIVO'
                 `,
                 permissao_ids
             );
@@ -406,7 +738,7 @@ const assignRolePermissions = async (req, res, next) => {
 
                 return res.status(400).json({
                     success: false,
-                    message: 'Uma ou mais permissões não existem ou estão inactivas.'
+                    message: 'Uma ou mais permissões não existem.'
                 });
             }
         }
@@ -450,12 +782,165 @@ const assignRolePermissions = async (req, res, next) => {
     }
 };
 
+/**
+ * Adicionar uma permissão específica a um perfil
+ */
+/**
+ * @swagger
+ * /api/roles/{id}/permissoes:
+ *   post:
+ *     summary: Adicionar permissão a um perfil
+ *     description: Adiciona uma nova permissão a um perfil específico sem remover as existentes.
+ *     tags: [Perfis]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do perfil.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - permissao_id
+ *             properties:
+ *               permissao_id:
+ *                 type: integer
+ *                 description: ID da permissão a adicionar.
+ *                 example: 5
+ *     responses:
+ *       200:
+ *         description: Permissão adicionada ao perfil com sucesso.
+ *       400:
+ *         description: ID da permissão em falta ou inválido.
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Perfil ou permissão não encontrados.
+ *       409:
+ *         description: O perfil já possui esta permissão.
+ */
+const addPermissionToRole = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { permissao_id } = req.body;
+
+        if (!permissao_id) {
+            return res.status(400).json({
+                success: false,
+                message: 'O ID da permissão é obrigatório.'
+            });
+        }
+
+        // Verificar se o perfil existe
+        const [role] = await pool.query('SELECT id FROM roles WHERE id = ? LIMIT 1', [id]);
+        if (role.length === 0) {
+            return res.status(404).json({ success: false, message: 'Perfil não encontrado.' });
+        }
+
+        // Verificar se a permissão existe
+        const [permissao] = await pool.query('SELECT id FROM permissoes WHERE id = ? LIMIT 1', [permissao_id]);
+        if (permissao.length === 0) {
+            return res.status(404).json({ success: false, message: 'Permissão não encontrada.' });
+        }
+
+        // Inserir (utiliza INSERT IGNORE ou validação prévia para evitar duplicados)
+        const [result] = await pool.query(
+            `INSERT IGNORE INTO role_permissoes (role_id, permissao_id) VALUES (?, ?)`,
+            [id, permissao_id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(409).json({
+                success: false,
+                message: 'O perfil já possui esta permissão.'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Permissão adicionada ao perfil com sucesso.'
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Remover uma permissão específica de um perfil
+ */
+/**
+ * @swagger
+ * /api/roles/{id}/permissoes/{permissaoId}:
+ *   delete:
+ *     summary: Remover permissão de um perfil
+ *     description: Remove a associação de uma permissão específica de um perfil.
+ *     tags: [Perfis]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do perfil.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *       - in: path
+ *         name: permissaoId
+ *         required: true
+ *         description: ID da permissão a remover.
+ *         schema:
+ *           type: integer
+ *         example: 5
+ *     responses:
+ *       200:
+ *         description: Permissão removida do perfil com sucesso.
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Associação não encontrada.
+ */
+const removePermissionFromRole = async (req, res, next) => {
+    try {
+        const { id, permissaoId } = req.params;
+
+        const [result] = await pool.query(
+            `DELETE FROM role_permissoes WHERE role_id = ? AND permissao_id = ?`,
+            [id, permissaoId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Associação de permissão não encontrada para este perfil.'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Permissão removida do perfil com sucesso.'
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     getRoles,
     getRoleById,
     createRole,
     updateRole,
-    updateRoleStatus,
+    deleteRole,
     getRolePermissions,
-    assignRolePermissions
+    assignRolePermissions,
+    removePermissionFromRole,
+    addPermissionToRole
 };

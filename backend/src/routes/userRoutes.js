@@ -97,7 +97,7 @@ router.get(
 // uploadUser.single('foto') intercepta o campo 'foto' do formulário
 router.post(
     '/',
-    roleMiddleware('ADMIN'),
+    // roleMiddleware('ADMIN'),
     uploadUser.single('foto'),
     createUser
 );

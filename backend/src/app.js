@@ -59,7 +59,7 @@ app.use('/api/seed', adminRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
-app.use('/api/permissions', permissionRoutes);
+app.use('/api/permissoes', permissionRoutes);
 
 app.use('/api', productRoutes); 
 app.use('/api', documentRoutes);

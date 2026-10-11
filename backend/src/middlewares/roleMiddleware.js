@@ -1,6 +1,8 @@
 const roleMiddleware = (...rolesPermitidos) => {
     return (req, res, next) => {
         try {
+
+            console.log("Call function here")
             if (!req.user) {
                 return res.status(401).json({
                     success: false,
