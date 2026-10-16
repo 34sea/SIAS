@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const path = require('path');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
@@ -11,19 +12,29 @@ const permissionRoutes = require('./routes/permissionRoutes');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
+// ================= Novos módulos SIAS =================
+const cursosRoutes = require('./routes/cursosRoutes');
+const docentesRoutes = require('./routes/docentesRoutes');
+const estudantesRoutes = require('./routes/estudantesRoutes');
+const orientacoesRoutes = require('./routes/orientacoesRoutes');
+const analisesRoutes = require('./routes/analisesRoutes');
+const documentosComparacaoRoutes = require('./routes/documentosComparacaoRoutes');
+const configuracoesRoutes = require('./routes/configuracoesRoutes');
+const relatoriosRoutes = require('./routes/relatoriosRoutes');
+const notificacoesRoutes = require('./routes/notificacoesRoutes');
+const auditoriaRoutes = require('./routes/auditoriaRoutes');
+
 const app = express();
 
 app.use(express.json());
+app.use(cors());
 
 app.use((req, res, next) => {
-
     const inicio = Date.now();
-
     console.log('');
-    console.log('╔══════════════════════════════════════════╗');
-    console.log('║          NOVA REQUISIÇÃO HTTP            ║');
-    console.log('╚══════════════════════════════════════════╝');
-
+    console.log('╔════════════════════════════════════════════════╗');
+    console.log('║          NOVA REQUISIÇÃO HTTP                  ║');
+    console.log('╚════════════════════════════════════════════════╝');
     console.log('Método:', req.method);
     console.log('URL:', req.originalUrl);
     console.log('IP:', req.ip);
@@ -33,12 +44,8 @@ app.use((req, res, next) => {
         'Authorization:',
         req.headers.authorization ? 'ENVIADO' : 'NÃO ENVIADO'
     );
-
     res.on('finish', () => {
-
         const tempo = Date.now() - inicio;
-
-        console.log('');
         console.log('---------- RESPOSTA ----------');
         console.log('URL:', req.originalUrl);
         console.log('Status:', res.statusCode);
@@ -46,11 +53,12 @@ app.use((req, res, next) => {
         console.log('------------------------------');
         console.log('');
     });
-
     next();
 });
-// Expor a pasta de uploads estaticamente (para visualizar as imagens salvas)
+
+// Expor a pasta de uploads estaticamente (para visualizar os ficheiros guardados)
 app.use('/uploads', express.static(path.resolve(__dirname, '..', 'uploads')));
+app.use('/src/uploads', express.static(path.resolve(__dirname, '..', 'uploads')));
 
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
@@ -63,7 +71,19 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/permissoes', permissionRoutes);
 app.use('/api/moonograph', monografiaRoutes);
 
-app.use('/api', productRoutes); 
+// --- Novos módulos ---
+app.use('/api/cursos', cursosRoutes);
+app.use('/api/docentes', docentesRoutes);
+app.use('/api/estudantes', estudantesRoutes);
+app.use('/api/orientacoes', orientacoesRoutes);
+app.use('/api/analises', analisesRoutes);
+app.use('/api/documentos-comparacao', documentosComparacaoRoutes);
+app.use('/api/configuracoes-similaridade', configuracoesRoutes);
+app.use('/api/relatorios', relatoriosRoutes);
+app.use('/api/notificacoes', notificacoesRoutes);
+app.use('/api/auditoria', auditoriaRoutes);
+
+app.use('/api', productRoutes);
 app.use('/api', documentRoutes);
 
 module.exports = app;

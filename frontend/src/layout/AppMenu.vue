@@ -9,80 +9,27 @@ const model = ref([
         items: [{ label: 'Dashboard', icon: 'pi pi-fw pi-home', to: '/dashboard' }]
     },
     {
-        label: 'Gestão(IA)',
-        icon: 'pi pi-fw pi-briefcase',
-        to: '/pages',
+        label: 'SIAS',
+        icon: 'pi pi-fw pi-file',
         items: [
-            {
-                label: 'Monitoramento',
-                icon: 'pi pi-camera',
-                to: '/ia/monitoring'
-            },
-            {
-                label: 'Gestão de Rostos',
-                icon: 'pi pi-address-book',
-                items: [
-                    {
-                        label: 'Lista',
-                        icon: 'pi pi-bars',
-                        to: '/ia/faces'
-                    },
-                    {
-                        label: 'Alertas',
-                        icon: 'pi pi-bell',
-                        to: '/ia/alerts'
-                    },
-                    {
-                        label: 'Novo',
-                        icon: 'pi pi-plus',
-                        to: '/ia/new/faces'
-                    }
-                ]
-            }
+            { label: 'Monografias', icon: 'pi pi-fw pi-book', to: '/monografias' },
+            { label: 'Análises', icon: 'pi pi-fw pi-chart-bar', to: '/analises' },
+            { label: 'Relatórios', icon: 'pi pi-fw pi-file-pdf', to: '/relatorios' },
+            { label: 'Notificações', icon: 'pi pi-fw pi-bell', to: '/notificacoes' },
         ]
     },
     {
-        label: 'Gestão de usuários',
-        icon: 'pi pi-fw pi-briefcase',
-        to: '/pages',
+        label: 'Gestão Administrativa',
+        icon: 'pi pi-fw pi-cog',
         items: [
-            {
-                label: 'Usuários',
-                icon: 'pi pi-fw pi-users',
-                to: '#',
-                items: [
-                    {
-                        label: 'Lista',
-                        icon: 'pi pi-bars',
-                        to: '/manage/user'
-                    },
-                    
-                ]
-            },
-            // {
-            //     label: 'Roles',
-            //     icon: 'pi pi-paperclip',
-            //     items: [
-            //         {
-            //             label: 'Lista',
-            //             icon: 'pi pi-bars',
-            //             to: '/manage/role'
-            //         },
-                    
-            //     ]
-            // },
-            // {
-            //     label: 'Permissões',
-            //     icon: 'pi pi-key',
-            //     items: [
-            //         {
-            //             label: 'Lista',
-            //             icon: 'pi pi-bars',
-            //             to: '/manage/permission'
-            //         },
-                    
-            //     ]
-            // }
+            { label: 'Cursos', icon: 'pi pi-fw pi-university', to: '/cursos' },
+            { label: 'Docentes', icon: 'pi pi-fw pi-user', to: '/docentes' },
+            { label: 'Estudantes', icon: 'pi pi-fw pi-users', to: '/estudantes' },
+            { label: 'Orientações', icon: 'pi pi-fw pi-sitemap', to: '/orientacoes' },
+            { label: 'Documentos de Comparação', icon: 'pi pi-fw pi-file', to: '/documentos-comparacao' },
+            { label: 'Utilizadores', icon: 'pi pi-fw pi-user-edit', to: '/manage/user' },
+            { label: 'Perfis (Roles)', icon: 'pi pi-fw pi-id-card', to: '/manage/role' },
+            { label: 'Permissões', icon: 'pi pi-fw pi-key', to: '/manage/permission' },
         ]
     },
 ]);

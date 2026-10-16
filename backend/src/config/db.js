@@ -7,6 +7,9 @@ const dbConfig = {
   database: process.env.DB_NAME || 'SIAS'
 };
 
-const pool = mysql.createPool(dbConfig);
+const pool = mysql.createPool({
+    ...dbConfig,
+    charset: 'utf8mb4',
+});
 
 module.exports = pool;

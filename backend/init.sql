@@ -36,38 +36,40 @@ INSERT INTO roles (nome, descricao) VALUES
 
 CREATE TABLE permissoes (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL UNIQUE,
+    codigo VARCHAR(100) NOT NULL UNIQUE,
+    nome VARCHAR(100) NOT NULL,
     descricao VARCHAR(255),
+    estado ENUM('ACTIVO','INACTIVO') NOT NULL DEFAULT 'ACTIVO',
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 
-INSERT INTO permissoes (nome, descricao) VALUES
-('UTILIZADORES_VISUALIZAR', 'Visualizar utilizadores'),
-('UTILIZADORES_CRIAR', 'Criar utilizadores'),
-('UTILIZADORES_EDITAR', 'Editar utilizadores'),
-('UTILIZADORES_DESATIVAR', 'Ativar ou desativar utilizadores'),
+INSERT INTO permissoes (codigo, nome, descricao) VALUES
+('UTILIZADORES_VISUALIZAR', 'Visualizar utilizadores', 'Visualizar utilizadores'),
+('UTILIZADORES_CRIAR', 'Criar utilizadores', 'Criar utilizadores'),
+('UTILIZADORES_EDITAR', 'Editar utilizadores', 'Editar utilizadores'),
+('UTILIZADORES_DESATIVAR', 'Ativar ou desativar utilizadores', 'Ativar ou desativar utilizadores'),
 
-('MONOGRAFIAS_VISUALIZAR', 'Visualizar monografias'),
-('MONOGRAFIAS_SUBMETER', 'Submeter monografias'),
-('MONOGRAFIAS_EDITAR', 'Editar monografias'),
-('MONOGRAFIAS_ELIMINAR', 'Eliminar monografias'),
+('MONOGRAFIAS_VISUALIZAR', 'Visualizar monografias', 'Visualizar monografias'),
+('MONOGRAFIAS_SUBMETER', 'Submeter monografias', 'Submeter monografias'),
+('MONOGRAFIAS_EDITAR', 'Editar monografias', 'Editar monografias'),
+('MONOGRAFIAS_ELIMINAR', 'Eliminar monografias', 'Eliminar monografias'),
 
-('ANALISES_VISUALIZAR', 'Visualizar análises'),
-('ANALISES_EXECUTAR', 'Executar análises'),
-('ANALISES_REANALISAR', 'Solicitar nova análise'),
+('ANALISES_VISUALIZAR', 'Visualizar análises', 'Visualizar análises'),
+('ANALISES_EXECUTAR', 'Executar análises', 'Executar análises'),
+('ANALISES_REANALISAR', 'Solicitar nova análise', 'Solicitar nova análise'),
 
-('RELATORIOS_VISUALIZAR', 'Visualizar relatórios'),
-('RELATORIOS_EXPORTAR', 'Exportar relatórios'),
+('RELATORIOS_VISUALIZAR', 'Visualizar relatórios', 'Visualizar relatórios'),
+('RELATORIOS_EXPORTAR', 'Exportar relatórios', 'Exportar relatórios'),
 
-('DOCUMENTOS_GERIR', 'Gerir documentos da base documental'),
+('DOCUMENTOS_GERIR', 'Gerir documentos da base documental', 'Gerir documentos da base documental'),
 
-('CURSOS_GERIR', 'Gerir cursos'),
-('ORIENTADORES_GERIR', 'Gerir orientadores'),
+('CURSOS_GERIR', 'Gerir cursos', 'Gerir cursos'),
+('ORIENTADORES_GERIR', 'Gerir orientadores', 'Gerir orientadores'),
 
-('CONFIGURACOES_GERIR', 'Gerir configurações de similaridade'),
+('CONFIGURACOES_GERIR', 'Gerir configurações de similaridade', 'Gerir configurações de similaridade'),
 
-('AUDITORIA_VISUALIZAR', 'Visualizar auditoria');
+('AUDITORIA_VISUALIZAR', 'Visualizar auditoria', 'Visualizar auditoria');
 
 
 -- ============================================================

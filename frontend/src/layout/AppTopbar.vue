@@ -40,7 +40,7 @@ const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout();
                     </g>
                 </svg> -->
 
-                <span>Reconhecimento Facial</span>
+                <span>SIAS</span>
             </router-link>
         </div>
 
