@@ -1,13 +1,13 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue';
-import { useMonografias } from '@/composables/useMonografias';
+import { monografiaService } from '@/services/monografiaService';
 import { useAuth } from '@/composables/useAuth';
 import { useNotificacoes } from '@/composables/useNotificacoes';
 import { useCursos } from '@/composables/useCursos';
 import { useToast } from 'primevue/usetoast';
 
 const { listar, obter, submeter, carregarVersoes, submeterVersao, arquivar, items, total, loading, item, versoes, error } =
-    useMonografias();
+    monografiaService();
 
 const { isAuthenticated, role, user, logout } = useAuth();
 const { listar: listarNotificacoes } = useNotificacoes(user.value?.id);
@@ -27,7 +27,6 @@ const form = reactive({
 
 const showForm = ref(false);
 const showVersoes = ref(false);
-const arquivoVersao = ref(null);
 const monografiaSelecionada = ref(null);
 const search = ref('');
 const estadoFiltro = ref('');
@@ -115,7 +114,6 @@ async function handleVersaoUpload(event) {
 }
 
 function confirmarArquivamento(id) {
-    // Simples confirmação via toast para não depender de ConfirmationService configurado globalmente
     if (window.confirm('Tem certeza que deseja arquivar esta monografia?')) {
         arquivar(id).then(() => {
             toast.add({ severity: 'success', summary: 'Sucesso', detail: 'Monografia arquivada.' });
@@ -135,8 +133,8 @@ const podeGerir = computed(() => role.value === 'ADMIN');
         <ConfirmDialog />
 
         <div class="page-header">
-            <h1 class="text-2xl font-bold text-sias-800">Monografias</h1>
-            <p class="text-sias-600">Submeta e acompanhe as monografias de similaridade.</p>
+            <h1 class="text-2xl font-bold">Monografias</h1>
+            <p class="text-sias-text-secondary">Submeta e acompanhe as monografias de similaridade.</p>
         </div>
 
         <div class="toolbar">
@@ -178,7 +176,6 @@ const podeGerir = computed(() => role.value === 'ADMIN');
             </DataTable>
         </Card>
 
-        <!-- Dialog: Submeter monografia -->
         <Dialog v-model:visible="showForm" header="Submeter Monografia" :modal="true" style="width: 600px">
             <div class="flex flex-col gap-3">
                 <InputText v-model="form.titulo" label="Título da Monografia" placeholder="Título do trabalho" />
@@ -194,7 +191,6 @@ const podeGerir = computed(() => role.value === 'ADMIN');
             </template>
         </Dialog>
 
-        <!-- Dialog: Versões -->
         <Dialog v-model:visible="showVersoes" :header="`Versões — ${monografiaSelecionada?.titulo}`" :modal="true" style="width: 700px">
             <div class="mb-4">
                 <FileUpload v-model:files="arquivoVersao" label="Enviar nova versão" accept=".pdf,.doc,.docx" chooseLabel="Selecionar ficheiro" @upload="handleVersaoUpload" />
@@ -238,5 +234,8 @@ const podeGerir = computed(() => role.value === 'ADMIN');
 .actions {
     display: flex;
     gap: 0.5rem;
+}
+.crud-page {
+    color: var(--sias-text-primary);
 }
 </style>

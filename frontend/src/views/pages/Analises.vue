@@ -1,11 +1,11 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue';
-import { useAnalises } from '@/composables/useAnalises';
+import { analiseService } from '@/services/analiseService';
 import { useAuth } from '@/composables/useAuth';
 import { useMonografias } from '@/composables/useMonografias';
 import { useToast } from 'primevue/usetoast';
 
-const { listar, obter, executar, reanalisar, items, loading, error } = useAnalises();
+const { listar, obter, executar, reanalisar, items, loading, error } = analiseService();
 const { isAuthenticated, role } = useAuth();
 const { listar: listarMonografias, items: monografiasItems } = useMonografias();
 const toast = useToast();
@@ -81,8 +81,8 @@ const podeVer = computed(() => role.value === 'ADMIN' || role.value === 'DOCENTE
     <div class="analises-page">
         <Toast />
         <div class="page-header">
-            <h1 class="text-2xl font-bold text-sias-800">Análises de Similaridade</h1>
-            <p class="text-sias-600">Gerir e acompanhar o processo de análise das monografias.</p>
+            <h1 class="text-2xl font-bold">Análises de Similaridade</h1>
+            <p class="text-sias-text-secondary">Gerir e acompanhar o processo de análise das monografias.</p>
         </div>
 
         <div class="toolbar">
@@ -131,7 +131,6 @@ const podeVer = computed(() => role.value === 'ADMIN' || role.value === 'DOCENTE
             </DataTable>
         </Card>
 
-        <!-- Dialog: Executar análise -->
         <Dialog v-model:visible="showForm" header="Executar Nova Análise" :modal="true" style="width: 550px">
             <div class="flex flex-col gap-3">
                 <Dropdown v-model="form.monografia_versao_id" label="Versão da Monografia" :options="monografiasItems.map(m => ({ label: m.titulo, value: m.id }))" placeholder="Selecionar versão" />
@@ -180,9 +179,11 @@ const podeVer = computed(() => role.value === 'ADMIN' || role.value === 'DOCENTE
     font-size: 0.8rem;
     font-weight: 600;
     text-transform: uppercase;
+    background: var(--sias-blue-slate);
+    color: var(--sias-text-primary);
 }
-.estado-aguardando { background: #fff3cd; color: #856404; }
-.estado-processando { background: #cce5ff; color: #004085; }
-.estado-concluida { background: #d4edda; color: #155724; }
+.estado-aguardando { background: var(--sias-foggy-blue); color: var(--sias-text-primary); }
+.estado-processando { background: var(--sias-cloud-blue); color: var(--sias-text-primary); }
+.estado-concluida { background: var(--sias-dusk-blue); color: var(--sias-text-primary); }
 .estado-erro { background: #f8d7da; color: #721c24; }
 </style>

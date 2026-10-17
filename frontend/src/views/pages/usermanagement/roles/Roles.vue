@@ -14,7 +14,6 @@ const form = reactive({ id: null, nome: '', descricao: '' });
 const showForm = ref(false);
 const modoEdicao = ref(false);
 
-// Permissões para atribuição
 const todasPermissoes = ref([]);
 const permissoesSelecionadas = ref([]);
 const showPermDialog = ref(false);
@@ -128,8 +127,8 @@ async function remover(id) {
     <div class="crud-page">
         <Toast />
         <div class="page-header">
-            <h1 class="text-2xl font-bold text-sias-800">Gestão de Perfis (Roles)</h1>
-            <p class="text-sias-600">Gerencie os perfis de acesso do sistema.</p>
+            <h1 class="text-2xl font-bold">Gestão de Perfis (Roles)</h1>
+            <p class="text-sias-text-secondary">Gerencie os perfis de acesso do sistema.</p>
         </div>
 
         <div class="toolbar">
@@ -155,7 +154,6 @@ async function remover(id) {
             </DataTable>
         </Card>
 
-        <!-- Dialog: Criar/Editar perfil -->
         <Dialog v-model:visible="showForm" :header="modoEdicao ? 'Editar Perfil' : 'Novo Perfil'" :modal="true" style="width: 500px">
             <div class="flex flex-col gap-3">
                 <InputText v-model="form.nome" label="Nome do Perfil" placeholder="Ex: ADMIN, ESTUDANTE, DOCENTE" />
@@ -167,7 +165,6 @@ async function remover(id) {
             </template>
         </Dialog>
 
-        <!-- Dialog: Permissões do perfil -->
         <Dialog v-model:visible="showPermDialog" :header="`Permissões — ${perfilSelecionado?.nome}`" :modal="true" style="width: 600px">
             <div class="flex flex-col gap-3">
                 <div class="checkbox-group">
@@ -206,9 +203,12 @@ async function remover(id) {
 .checkbox-group {
     max-height: 300px;
     overflow-y: auto;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--sias-border);
     border-radius: 6px;
     padding: 1rem;
-    background: var(--surface-section);
+    background: var(--sias-surface);
+}
+.crud-page {
+    color: var(--sias-text-primary);
 }
 </style>

@@ -34,7 +34,6 @@ async function carregarUtilizadores() {
     try {
         const resposta = await usersApi.list({ role_id: '' });
         const data = Array.isArray(resposta.data) ? resposta.data : (Array.isArray(resposta) ? resposta : []);
-        // Filtrar apenas utilizadores que ainda não são docentes nem estudantes
         utilizadores.value = data.filter(u => u.role_nome !== 'DOCENTE' && u.role_nome !== 'ESTUDANTE');
     } catch (err) {
         console.error('Erro ao carregar utilizadores:', err);
@@ -119,8 +118,8 @@ async function remover(id) {
     <div class="crud-page">
         <Toast />
         <div class="page-header">
-            <h1 class="text-2xl font-bold text-sias-800">Gestão de Docentes / Orientadores</h1>
-            <p class="text-sias-600">Registe os docentes que podem orientar monografias.</p>
+            <h1 class="text-2xl font-bold">Gestão de Docentes / Orientadores</h1>
+            <p class="text-sias-text-secondary">Registe os docentes que podem orientar monografias.</p>
         </div>
 
         <div class="toolbar">
@@ -194,8 +193,8 @@ async function remover(id) {
     display: inline-block;
     padding: 0.2rem 0.6rem;
     border-radius: 12px;
-    background: #d4edda;
-    color: #155724;
+    background: var(--sias-dusk-blue);
+    color: var(--sias-text-primary);
     font-size: 0.8rem;
     font-weight: 600;
 }
@@ -203,8 +202,8 @@ async function remover(id) {
     display: inline-block;
     padding: 0.2rem 0.6rem;
     border-radius: 12px;
-    background: #f8d7da;
-    color: #721c24;
+    background: var(--sias-blue-slate);
+    color: var(--sias-text-primary);
     font-size: 0.8rem;
     font-weight: 600;
 }
@@ -212,5 +211,8 @@ async function remover(id) {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+.crud-page {
+    color: var(--sias-text-primary);
 }
 </style>

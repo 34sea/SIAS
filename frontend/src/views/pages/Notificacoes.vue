@@ -21,8 +21,8 @@ async function ler(id) {
     <div class="notificacoes-page">
         <Toast />
         <div class="page-header">
-            <h1 class="text-2xl font-bold text-sias-800">Notificações</h1>
-            <p class="text-sias-600">Acompanhe os alertas do sistema (submissões, análises, relatórios).</p>
+            <h1 class="text-2xl font-bold">Notificações</h1>
+            <p class="text-sias-text-secondary">Acompanhe os alertas do sistema (submissões, análises, relatórios).</p>
         </div>
 
         <Card class="mt-4">
@@ -64,8 +64,8 @@ async function ler(id) {
     display: inline-block;
     padding: 0.2rem 0.6rem;
     border-radius: 12px;
-    background: #d4edda;
-    color: #155724;
+    background: var(--sias-dusk-blue);
+    color: var(--sias-text-primary);
     font-size: 0.8rem;
     font-weight: 600;
 }
@@ -73,9 +73,12 @@ async function ler(id) {
     display: inline-block;
     padding: 0.2rem 0.6rem;
     border-radius: 12px;
-    background: #f8d7da;
-    color: #721c24;
+    background: var(--sias-blue-slate);
+    color: var(--sias-text-primary);
     font-size: 0.8rem;
     font-weight: 600;
+}
+.crud-page {
+    color: var(--sias-text-primary);
 }
 </style>

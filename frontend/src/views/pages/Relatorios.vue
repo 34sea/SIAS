@@ -58,8 +58,8 @@ onMounted(listar);
     <div class="relatorios-page">
         <Toast />
         <div class="page-header">
-            <h1 class="text-2xl font-bold text-sias-800">Relatórios de Similaridade</h1>
-            <p class="text-sias-600">Consulte e exporte os relatórios de análise gerados.</p>
+            <h1 class="text-2xl font-bold">Relatórios de Similaridade</h1>
+            <p class="text-sias-text-secondary">Consulte e exporte os relatórios de análise gerados.</p>
         </div>
 
         <div class="toolbar">
@@ -98,5 +98,8 @@ onMounted(listar);
 }
 .toolbar {
     margin-bottom: 1rem;
+}
+.crud-page {
+    color: var(--sias-text-primary);
 }
 </style>

@@ -8,6 +8,7 @@ import ConfirmationService from 'primevue/confirmationservice';
 import ToastService from 'primevue/toastservice';
 
 import '@/assets/styles.scss';
+import '@/assets/sias-colors.css';
 
 const app = createApp(App);
 

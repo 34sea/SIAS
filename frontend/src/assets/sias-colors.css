@@ -1,0 +1,26 @@
+:root {
+    /* SIAS - Paleta de Cores Azul Escura */
+    --sias-deep-navy: #0A1B2E;
+    --sias-midnight-blue: #112A46;
+    --sias-ocean-depth: #1B3B5A;
+    --sias-storm-blue: #34506D;
+    --sias-blue-slate: #557392;
+    --sias-dusk-blue: #7A8CA6;
+    --sias-foggy-blue: #A1B2C4;
+    --sias-cloud-blue: #C4D2E1;
+    --sias-mist-blue: #E1E8F0;
+
+    /* Cores derivadas para o sistema */
+    --sias-primary: #0A1B2E;
+    --sias-primary-dark: #112A46;
+    --sias-primary-light: #34506D;
+    --sias-surface: #1B3B5A;
+    --sias-surface-light: #557392;
+    --sias-text-primary: #E1E8F0;
+    --sias-text-secondary: #C4D2E1;
+    --sias-text-muted: #A1B2C4;
+    --sias-border: #34506D;
+    --sias-bg: #0A1B2E;
+    --sias-bg-light: #112A46;
+    --sias-card-bg: #112A46;
+}

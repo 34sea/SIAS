@@ -122,8 +122,8 @@ async function remover(id) {
     <div class="crud-page">
         <Toast />
         <div class="page-header">
-            <h1 class="text-2xl font-bold text-sias-800">Base Documental de Comparação</h1>
-            <p class="text-sias-600">Gerencie os documentos usados para comparação de similaridade.</p>
+            <h1 class="text-2xl font-bold">Base Documental de Comparação</h1>
+            <p class="text-sias-text-secondary">Gerencie os documentos usados para comparação de similaridade.</p>
         </div>
 
         <div class="toolbar">
@@ -215,8 +215,8 @@ async function remover(id) {
     display: inline-block;
     padding: 0.2rem 0.6rem;
     border-radius: 12px;
-    background: #d4edda;
-    color: #155724;
+    background: var(--sias-dusk-blue);
+    color: var(--sias-text-primary);
     font-size: 0.8rem;
     font-weight: 600;
 }
@@ -224,8 +224,8 @@ async function remover(id) {
     display: inline-block;
     padding: 0.2rem 0.6rem;
     border-radius: 12px;
-    background: #f8d7da;
-    color: #721c24;
+    background: var(--sias-blue-slate);
+    color: var(--sias-text-primary);
     font-size: 0.8rem;
     font-weight: 600;
 }
@@ -233,8 +233,8 @@ async function remover(id) {
     display: inline-block;
     padding: 0.2rem 0.6rem;
     border-radius: 12px;
-    background: #f8d7da;
-    color: #721c24;
+    background: var(--sias-blue-slate);
+    color: var(--sias-text-primary);
     font-size: 0.8rem;
     font-weight: 600;
 }
@@ -242,8 +242,8 @@ async function remover(id) {
     display: inline-block;
     padding: 0.2rem 0.6rem;
     border-radius: 12px;
-    background: #d4edda;
-    color: #155724;
+    background: var(--sias-dusk-blue);
+    color: var(--sias-text-primary);
     font-size: 0.8rem;
     font-weight: 600;
 }
@@ -257,12 +257,12 @@ async function remover(id) {
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--sias-border);
     border-radius: 6px;
-    background: var(--surface-section);
+    background: var(--sias-surface);
     cursor: pointer;
     font-size: 0.9rem;
-    color: var(--text-color);
+    color: var(--sias-text-primary);
 }
 .file-upload-label input[type="file"] {
     display: none;
@@ -271,5 +271,8 @@ async function remover(id) {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+.crud-page {
+    color: var(--sias-text-primary);
 }
 </style>

@@ -3,13 +3,11 @@ import { ref, reactive, onMounted } from 'vue';
 import { orientacaoService } from '@/services/orientacaoService';
 import { estudanteService } from '@/services/estudanteService';
 import { docenteService } from '@/services/docenteService';
-import { useAuth } from '@/composables/useAuth';
 import { useToast } from 'primevue/usetoast';
 
-const { listar, criar, actualizar, eliminar } = orientacaoService;
+const { listar, criar, actualizar, eliminar } = orientacaoService();
 const { listar: listarEstudantes } = estudanteService;
 const { listar: listarDocentes } = docenteService;
-const { role } = useAuth();
 const toast = useToast();
 
 const orientacoes = ref([]);
@@ -38,13 +36,13 @@ onMounted(async () => {
     }
 });
 
-async function abrirNovo() {
+function abrirNovo() {
     Object.assign(form, { id: null, estudante_id: '', docente_id: '', data_inicio: null, data_fim: null, estado: 'ATIVA', observacoes: '' });
     modoEdicao.value = false;
     showForm.value = true;
 }
 
-async function editar(item) {
+function editar(item) {
     Object.assign(form, { id: item.id, estudante_id: item.estudante_id, docente_id: item.docente_id, data_inicio: item.data_inicio ? new Date(item.data_inicio) : null, data_fim: item.data_fim ? new Date(item.data_fim) : null, estado: item.estado, observacoes: item.observacoes || '' });
     modoEdicao.value = true;
     showForm.value = true;
@@ -86,21 +84,18 @@ async function remover(id) {
     }
 }
 
-const podeGerir = role.value === 'ADMIN';
-
 </script>
 
 <template>
     <div class="crud-page">
         <Toast />
-        <ConfirmDialog />
         <div class="page-header">
-            <h1 class="text-2xl font-bold text-sias-800">Gestão de Orientações</h1>
-            <p class="text-sias-600">Associe estudantes aos respectivos orientadores.</p>
+            <h1 class="text-2xl font-bold">Gestão de Orientações</h1>
+            <p class="text-sias-text-secondary">Associe estudantes aos respectivos orientadores.</p>
         </div>
 
         <div class="toolbar">
-            <Button v-if="podeGerir" label="Nova Orientação" icon="pi pi-plus" outlined @click="abrirNovo" />
+            <Button label="Nova Orientação" icon="pi pi-plus" outlined @click="abrirNovo" />
         </div>
 
         <Card class="mt-4">
@@ -122,8 +117,8 @@ const podeGerir = role.value === 'ADMIN';
                 <Column field="acoes" header="Ações" style="width: 180px; text-align: center">
                     <template #body="slotProps">
                         <div class="flex justify-content-center gap-2">
-                            <Button v-if="podeGerir" icon="pi pi-pencil" outlined rounded @click="editar(slotProps.data)" />
-                            <Button v-if="podeGerir" icon="pi pi-trash" outlined severity="danger" rounded @click="remover(slotProps.data.id)" />
+                            <Button icon="pi pi-pencil" outlined rounded @click="editar(slotProps.data)" />
+                            <Button icon="pi pi-trash" outlined severity="danger" rounded @click="remover(slotProps.data.id)" />
                         </div>
                     </template>
                 </Column>
@@ -162,13 +157,16 @@ const podeGerir = role.value === 'ADMIN';
 }
 .toolbar {
     margin-bottom: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
 }
 .badge-ativa {
     display: inline-block;
     padding: 0.2rem 0.6rem;
     border-radius: 12px;
-    background: #d4edda;
-    color: #155724;
+    background: var(--sias-dusk-blue);
+    color: var(--sias-text-primary);
     font-size: 0.8rem;
     font-weight: 600;
 }
@@ -176,8 +174,8 @@ const podeGerir = role.value === 'ADMIN';
     display: inline-block;
     padding: 0.2rem 0.6rem;
     border-radius: 12px;
-    background: #cce5ff;
-    color: #004085;
+    background: var(--sias-cloud-blue);
+    color: var(--sias-text-primary);
     font-size: 0.8rem;
     font-weight: 600;
 }
@@ -185,9 +183,12 @@ const podeGerir = role.value === 'ADMIN';
     display: inline-block;
     padding: 0.2rem 0.6rem;
     border-radius: 12px;
-    background: #f8d7da;
-    color: #721c24;
+    background: var(--sias-blue-slate);
+    color: var(--sias-text-primary);
     font-size: 0.8rem;
     font-weight: 600;
+}
+.crud-page {
+    color: var(--sias-text-primary);
 }
 </style>

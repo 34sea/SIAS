@@ -87,8 +87,8 @@ async function remover(id) {
     <div class="crud-page">
         <Toast />
         <div class="page-header">
-            <h1 class="text-2xl font-bold text-sias-800">Gestão de Permissões</h1>
-            <p class="text-sias-600">Gerencie as permissões de acesso do sistema.</p>
+            <h1 class="text-2xl font-bold">Gestão de Permissões</h1>
+            <p class="text-sias-text-secondary">Gerencie as permissões de acesso do sistema.</p>
         </div>
 
         <div class="toolbar">
@@ -142,5 +142,8 @@ async function remover(id) {
     gap: 0.5rem;
     align-items: center;
     flex-wrap: wrap;
+}
+.crud-page {
+    color: var(--sias-text-primary);
 }
 </style>

@@ -1,10 +1,8 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import { cursoService } from '@/services/cursoService';
-import { useAuth } from '@/composables/useAuth';
 import { useToast } from 'primevue/usetoast';
 
-const { role } = useAuth();
 const toast = useToast();
 
 const cursos = ref([]);
@@ -15,21 +13,20 @@ const form = reactive({ id: null, nome: '', codigo: '', descricao: '', ativo: tr
 const showForm = ref(false);
 const modoEdicao = ref(false);
 
-onMounted(async () => {
+onMounted(listar);
+
+async function listar() {
+    loading.value = true;
     try {
         const resposta = await cursoService.listar({});
         cursos.value = resposta.data || resposta;
-        console.log("Resposta")
-        console.log(resposta.data)
-        console.log("------------------------------------")
-        console.log(cursos.value)
     } catch (err) {
         error.value = err.message || 'Erro ao listar cursos.';
         toast.add({ severity: 'error', summary: 'Erro', detail: error.value });
     } finally {
         loading.value = false;
     }
-});
+}
 
 function abrirNovo() {
     Object.assign(form, { id: null, nome: '', codigo: '', descricao: '', ativo: true });
@@ -61,8 +58,7 @@ async function salvar() {
         if (resposta.success) {
             toast.add({ severity: 'success', summary: 'Sucesso', detail: modoEdicao.value ? 'Curso actualizado.' : 'Curso criado.' });
             showForm.value = false;
-            const resposta2 = await cursoService.listar({});
-            cursos.value = resposta2.data || resposta2;
+            await listar();
         } else {
             toast.add({ severity: 'error', summary: 'Erro', detail: resposta.error });
         }
@@ -72,13 +68,12 @@ async function salvar() {
 }
 
 async function remover(id) {
-    if (!window.confirm('Eliminar este curso?')) return;
+    if (!window.confirm('Tem certeza que deseja eliminar este curso?')) return;
     try {
         const resposta = await cursoService.eliminar(id);
         if (resposta.success) {
             toast.add({ severity: 'success', summary: 'Sucesso', detail: 'Curso eliminado.' });
-            const resposta2 = await cursoService.listar({});
-            cursos.value = resposta2.data || resposta2;
+            await listar();
         } else {
             toast.add({ severity: 'error', summary: 'Erro', detail: resposta.error });
         }
@@ -87,65 +82,47 @@ async function remover(id) {
     }
 }
 
-const podeGerir = role.value === 'ADMIN';
-
 </script>
 
 <template>
     <div class="crud-page">
         <Toast />
         <div class="page-header">
-            <h1 class="text-2xl font-bold text-sias-800">Gestão de Cursos</h1>
-            <p class="text-sias-600">Cadastre os cursos da instituição.</p>
+            <h1 class="text-2xl font-bold">Gestão de Cursos</h1>
+            <p class="text-sias-text-secondary">Cadastre os cursos da instituição.</p>
         </div>
 
         <div class="toolbar">
-            <Button v-if="podeGerir" label="Novo Curso" icon="pi pi-plus" outlined @click="abrirNovo" />
+            <Button label="Novo Curso" icon="pi pi-plus" outlined @click="abrirNovo" />
         </div>
 
-        <Card style="border: 0px solid transparent; padding: 20px;">
-            <template #content>
-  
-
-                 <DataTable :value="cursos" :paginator="true" :rows="10" dataKey="id" :loading="loading"
-                emptyMessage="Nenhum curso encontrado.">
+        <Card class="mt-4">
+            <DataTable :value="cursos" :paginator="true" :rows="10" dataKey="id" :loading="loading" emptyMessage="Nenhum curso encontrado.">
                 <template #header>
-                    <span>Cursos ({{ cursos.length }})</span>
+                    <span>Cursos ({{ cursos.value.length }})</span>
                 </template>
-
                 <Column field="nome" header="Nome" sortable />
                 <Column field="codigo" header="Código" sortable />
                 <Column field="descricao" header="Descrição" />
-
                 <Column field="ativo" header="Estado">
                     <template #body="slotProps">
-                        <span :class="Number(slotProps.data.ativo) === 1
-                            ? 'badge-ativo'
-                            : 'badge-inativo'">
-                            {{ Number(slotProps.data.ativo) === 1
-                                ? 'Activo'
-                                : 'Inactivo' }}
+                        <span :class="slotProps.data.ativo ? 'badge-ativo' : 'badge-inativo'">
+                            {{ slotProps.data.ativo ? 'Activo' : 'Inactivo' }}
                         </span>
                     </template>
                 </Column>
-
-                <Column field="acoes" header="Ações">
+                <Column field="acoes" header="Ações" style="width: 200px; text-align: center">
                     <template #body="slotProps">
                         <div class="flex justify-content-center gap-2">
-                            <Button v-if="podeGerir" icon="pi pi-pencil" outlined rounded class="btn-edit"
-                                @click="editar(slotProps.data)" />
-
-                            <Button v-if="podeGerir" icon="pi pi-trash" outlined severity="danger" rounded
-                                class="btn-delete" @click="remover(slotProps.data.id)" />
+                            <Button icon="pi pi-pencil" outlined rounded class="btn-edit" @click="editar(slotProps.data)" />
+                            <Button icon="pi pi-trash" outlined severity="danger" rounded class="btn-delete" @click="remover(slotProps.data.id)" />
                         </div>
                     </template>
                 </Column>
             </DataTable>
-            </template>
-            
         </Card>
-        <Dialog v-model:visible="showForm" :header="modoEdicao ? 'Editar Curso' : 'Novo Curso'" :modal="true"
-            style="width: 500px">
+
+        <Dialog v-model:visible="showForm" :header="modoEdicao ? 'Editar Curso' : 'Novo Curso'" :modal="true" style="width: 500px">
             <div class="flex flex-col gap-3">
                 <InputText v-model="form.nome" label="Nome" placeholder="Ex: Engenharia Informática" />
                 <InputText v-model="form.codigo" label="Código" placeholder="Ex: ENG-INF" />
@@ -172,37 +149,36 @@ const podeGerir = role.value === 'ADMIN';
     gap: 0.25rem;
     margin-bottom: 1.5rem;
 }
-
 .toolbar {
     margin-bottom: 1rem;
     display: flex;
     gap: 0.5rem;
     align-items: center;
 }
-
 .badge-ativo {
     display: inline-block;
     padding: 0.2rem 0.6rem;
     border-radius: 12px;
-    background: #d4edda;
-    color: #155724;
+    background: var(--sias-dusk-blue);
+    color: var(--sias-text-primary);
     font-size: 0.8rem;
     font-weight: 600;
 }
-
 .badge-inativo {
     display: inline-block;
     padding: 0.2rem 0.6rem;
     border-radius: 12px;
-    background: #f8d7da;
-    color: #721c24;
+    background: var(--sias-blue-slate);
+    color: var(--sias-text-primary);
     font-size: 0.8rem;
     font-weight: 600;
 }
-
 .field-checkbox {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+.crud-page {
+    color: var(--sias-text-primary);
 }
 </style>
