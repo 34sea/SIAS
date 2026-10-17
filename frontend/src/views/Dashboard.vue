@@ -11,7 +11,7 @@ import { useToast } from 'primevue/usetoast';
 
 const router = useRouter();
 const toast = useToast();
-const { stats, loading, error, carregar } = useDashboard();
+const { stats, analises, loading, error, carregar } = useDashboard();
 
 onMounted(async () => {
     try {
@@ -53,6 +53,28 @@ const chartAnalisesData = computed(() => ({
     ]
 }));
 
+/* Novo Gráfico de Barras: Similaridade por Trabalho */
+const chartSimilaridadePorTrabalhoData = computed(() => {
+    // Filtra apenas análises concluídas que possuam similaridade calculada
+    const concluidas = analises.value.filter(a => a.estado === 'CONCLUIDA' && a.similaridade_geral !== null);
+    // Seleciona por exemplo as últimas 8 análises para manter o gráfico limpo e legível
+    const ultimas = concluidas.slice(-8);
+
+    return {
+        labels: ultimas.map(a => a.monografia_titulo || `Trabalho #${a.id}`),
+        datasets: [
+            {
+                label: 'Taxa de Similaridade (%)',
+                data: ultimas.map(a => Number(a.similaridade_geral || 0)),
+                backgroundColor: '#3b82f6',
+                borderColor: '#2563eb',
+                borderWidth: 1,
+                borderRadius: 6
+            }
+        ]
+    };
+});
+
 const chartOptions = {
     plugins: {
         legend: {
@@ -60,6 +82,32 @@ const chartOptions = {
             labels: {
                 boxWidth: 12,
                 font: { size: 12, family: 'inherit' }
+            }
+        }
+    },
+    responsive: true,
+    maintainAspectRatio: false
+};
+
+const barChartOptions = {
+    plugins: {
+        legend: {
+            display: false
+        }
+    },
+    scales: {
+        y: {
+            beginAtZero: true,
+            max: 100,
+            ticks: {
+                callback: function(value) {
+                    return value + '%';
+                }
+            }
+        },
+        x: {
+            ticks: {
+                font: { size: 11 }
             }
         }
     },
@@ -128,7 +176,7 @@ const chartOptions = {
             </div>
         </div>
 
-        <!-- Gráficos Analíticos -->
+        <!-- Gráficos Analíticos (Circular / Rosca) -->
         <div class="charts-grid">
             <div class="chart-card">
                 <div class="chart-header">
@@ -148,6 +196,17 @@ const chartOptions = {
                 <div class="chart-container">
                     <Chart type="pie" :data="chartAnalisesData" :options="chartOptions" class="h-full w-full" />
                 </div>
+            </div>
+        </div>
+
+        <!-- Novo Gráfico de Barras: Similaridade por Trabalho -->
+        <div class="chart-card full-width mb-6">
+            <div class="chart-header">
+                <h3>Taxa de Similaridade por Trabalho (%)</h3>
+                <span class="text-xs text-secondary">Percentual de correspondência encontrado nas análises mais recentes</span>
+            </div>
+            <div class="chart-container-bar">
+                <Chart type="bar" :data="chartSimilaridadePorTrabalhoData" :options="barChartOptions" class="h-full w-full" />
             </div>
         </div>
 
@@ -257,6 +316,10 @@ const chartOptions = {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
+.chart-card.full-width {
+    margin-bottom: 1.5rem;
+}
+
 .chart-header {
     margin-bottom: 1rem;
 }
@@ -274,6 +337,14 @@ const chartOptions = {
 
 .chart-container {
     height: 260px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.chart-container-bar {
+    height: 320px;
     position: relative;
     display: flex;
     justify-content: center;

@@ -428,6 +428,7 @@ const getMonografiaById = async (req, res, next) => {
 /**
  * Submete uma nova monografia e cria a primeira versão numa transacção.
  */
+
 const createMonografia = async (req, res, next) => {
     let connection;
     let transacaoIniciada = false;
@@ -446,6 +447,16 @@ const createMonografia = async (req, res, next) => {
             return res.status(400).json({
                 success: false,
                 message: 'O ficheiro da monografia é obrigatório.'
+            });
+        }
+
+        // ID da conta autenticada, não o ID do estudante.
+        const utilizadorId = Number(req.user?.id);
+
+        if (!Number.isInteger(utilizadorId) || utilizadorId <= 0) {
+            return res.status(401).json({
+                success: false,
+                message: 'Utilizador não autenticado ou ID inválido.'
             });
         }
 
@@ -487,7 +498,10 @@ const createMonografia = async (req, res, next) => {
         ) {
             orientadorId = Number(orientador_id);
 
-            if (!Number.isInteger(orientadorId) || orientadorId <= 0) {
+            if (
+                !Number.isInteger(orientadorId) ||
+                orientadorId <= 0
+            ) {
                 return res.status(400).json({
                     success: false,
                     message: 'ID do orientador inválido.'
@@ -495,23 +509,41 @@ const createMonografia = async (req, res, next) => {
             }
         }
 
-        const caminhoRelativo = path.posix.join(
-            'uploads',
-            'monografias',
-            req.file.filename
-        );
-
-        const hash = await calcularHash(req.file.path);
-
         connection = await pool.getConnection();
+
         await connection.beginTransaction();
         transacaoIniciada = true;
 
+        // 1. Confirmar que a conta existe e está ativa.
+        const [utilizadores] = await connection.query(
+            `
+            SELECT u.id, r.nome AS role
+            FROM utilizadores u
+            INNER JOIN roles r ON r.id = u.role_id
+            WHERE u.id = ?
+              AND u.ativo = TRUE
+            LIMIT 1
+            `,
+            [utilizadorId]
+        );
+
+        if (utilizadores.length === 0) {
+            await connection.rollback();
+            transacaoIniciada = false;
+
+            return res.status(401).json({
+                success: false,
+                message: 'Utilizador inexistente ou inativo.'
+            });
+        }
+
+        // 2. Confirmar que o estudante existe e está ativo.
         const [estudantes] = await connection.query(
             `
-            SELECT id
+            SELECT id, utilizador_id, curso_id
             FROM estudantes
             WHERE id = ?
+              AND ativo = TRUE
             LIMIT 1
             `,
             [estudanteId]
@@ -523,16 +555,35 @@ const createMonografia = async (req, res, next) => {
 
             return res.status(400).json({
                 success: false,
-                message: 'O estudante indicado não existe.'
+                message: 'Estudante inexistente ou inativo.'
             });
         }
 
+        const estudante = estudantes[0];
+        const utilizador = utilizadores[0];
+
+        // 3. Impedir que um estudante submeta em nome de outro.
+        if (
+            utilizador.role === 'ESTUDANTE' &&
+            Number(estudante.utilizador_id) !== utilizadorId
+        ) {
+            await connection.rollback();
+            transacaoIniciada = false;
+
+            return res.status(403).json({
+                success: false,
+                message: 'Não podes submeter uma monografia em nome de outro estudante.'
+            });
+        }
+
+        // 4. Validar o orientador.
         if (orientadorId !== null) {
             const [orientadores] = await connection.query(
                 `
                 SELECT id
                 FROM docentes
                 WHERE id = ?
+                  AND ativo = TRUE
                 LIMIT 1
                 `,
                 [orientadorId]
@@ -544,11 +595,21 @@ const createMonografia = async (req, res, next) => {
 
                 return res.status(400).json({
                     success: false,
-                    message: 'O orientador indicado não existe.'
+                    message: 'Orientador inexistente ou inativo.'
                 });
             }
         }
 
+        // 5. Calcular o hash e preparar o caminho do ficheiro.
+        const caminhoRelativo = path.posix.join(
+            'uploads',
+            'monografias',
+            req.file.filename
+        );
+
+        const hash = await calcularHash(req.file.path);
+
+        // 6. Criar a monografia.
         const [resultado] = await connection.query(
             `
             INSERT INTO monografias (
@@ -574,6 +635,8 @@ const createMonografia = async (req, res, next) => {
 
         const monografiaId = resultado.insertId;
 
+        // 7. Criar a primeira versão.
+        // submetido_por referencia utilizadores.id.
         const [versaoResultado] = await connection.query(
             `
             INSERT INTO monografia_versoes (
@@ -600,10 +663,11 @@ const createMonografia = async (req, res, next) => {
                 req.file.mimetype,
                 req.file.size,
                 hash,
-                estudanteId
+                utilizadorId
             ]
         );
 
+        // 8. Obter os registos antes de concluir a transação.
         const monografia = await obterMonografia(
             monografiaId,
             connection
@@ -632,6 +696,7 @@ const createMonografia = async (req, res, next) => {
             [versaoResultado.insertId]
         );
 
+        // 9. Confirmar ambas as inserções.
         await connection.commit();
         transacaoIniciada = false;
         guardarFicheiro = true;
@@ -642,14 +707,25 @@ const createMonografia = async (req, res, next) => {
             data: monografia,
             versao: versoes[0]
         });
+
     } catch (error) {
         if (connection && transacaoIniciada) {
-            await connection.rollback();
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error(
+                    'Erro ao reverter transação:',
+                    rollbackError.message
+                );
+            }
         }
 
-        next(error);
+        return next(error);
+
     } finally {
-        if (connection) connection.release();
+        if (connection) {
+            connection.release();
+        }
 
         if (req.file && !guardarFicheiro) {
             await removerFicheiro(req.file.path);

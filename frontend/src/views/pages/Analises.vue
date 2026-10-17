@@ -41,6 +41,11 @@ const form = reactive({
 
 const showForm = ref(false);
 
+// Estados para o Diálogo de Detalhes
+const showDetalhes = ref(false);
+const loadingDetalhes = ref(false);
+const analiseSelecionada = ref(null);
+
 /* Normalizadores e Utilitários */
 function extrairLista(resposta) {
     const corpo = resposta?.data ?? resposta;
@@ -101,8 +106,7 @@ const analisesFiltradas = computed(() => {
     return items.value.filter((a) => {
         const matchBusca = !termo || [
             a.monografia_titulo,
-            a.estudante_nome,
-            a.algoritmo
+            a.estudante_nome
         ].some(v => String(v ?? '').toLowerCase().includes(termo));
 
         const matchEstado = !estadoFiltro.value || a.estado === estadoFiltro.value;
@@ -138,6 +142,22 @@ function abrirExecutar() {
         texto_override: ''
     });
     showForm.value = true;
+}
+
+// Função para abrir e carregar os detalhes da análise
+async function verDetalhes(id) {
+    loadingDetalhes.value = true;
+    analiseSelecionada.value = null;
+    showDetalhes.value = true;
+    try {
+        const resposta = await obter(id);
+        analiseSelecionada.value = resposta?.data ?? resposta;
+    } catch (err) {
+        toast.add({ severity: 'error', summary: 'Erro', detail: 'Erro ao carregar detalhes da análise.', life: 4000 });
+        showDetalhes.value = false;
+    } finally {
+        loadingDetalhes.value = false;
+    }
 }
 
 async function handleExecutar() {
@@ -249,7 +269,7 @@ async function executarReanalise(id) {
         <!-- Barra de Ferramentas e Filtros -->
         <div class="toolbar-card">
             <div class="search-wrapper">
-                <InputText v-model="search" placeholder="Pesquisar por título, estudante ou algoritmo..." class="search-input" />
+                <InputText v-model="search" placeholder="Pesquisar por título ou estudante..." class="search-input" />
             </div>
             
             <div class="filters-group">
@@ -289,8 +309,6 @@ async function executarReanalise(id) {
                 </template>
             </Column>
 
-            <Column field="algoritmo" header="Algoritmo" style="min-width: 13rem;" />
-
             <Column field="estado" header="Estado" style="width: 10rem;">
                 <template #body="{ data }">
                     <Tag :value="rotuloEstado(data.estado)" :severity="severityEstado(data.estado)" />
@@ -321,7 +339,7 @@ async function executarReanalise(id) {
                 <template #body="{ data }">
                     <div class="action-buttons">
                         <Button icon="pi pi-eye" severity="info" text rounded aria-label="Ver Detalhes"
-                            v-tooltip.top="'Ver detalhes da análise'" @click="obter(data.id)" />
+                            v-tooltip.top="'Ver detalhes da análise'" @click="verDetalhes(data.id)" />
                         <Button v-if="podeExecutar && data.estado === 'ERRO'" icon="pi pi-redo" severity="warning" text rounded aria-label="Reanalisar"
                             v-tooltip.top="'Solicitar nova análise'" @click="confirmarReanalise(data.id)" />
                     </div>
@@ -329,7 +347,7 @@ async function executarReanalise(id) {
             </Column>
         </DataTable>
 
-        <!-- Diálogo para Executar Nova Análise -->
+        <!-- Diálogo para Executar Nova Análise (Algoritmo Ocultado) -->
         <Dialog v-model:visible="showForm" header="Executar Nova Análise" modal
             :style="{ width: 'min(95vw, 560px)' }" :closable="!saving">
             <form class="analise-form" @submit.prevent="handleExecutar">
@@ -339,12 +357,6 @@ async function executarReanalise(id) {
                     <Dropdown id="monografia_versao_id" v-model="form.monografia_versao_id" 
                         :options="monografiasItems.map(m => ({ label: `${m.titulo} (v${m.numero_versao || 1})`, value: m.id }))" 
                         optionLabel="label" optionValue="value" placeholder="Selecione a versão da monografia" class="w-full" filter />
-                </div>
-
-                <div class="field">
-                    <label for="algoritmo">Algoritmo de Análise *</label>
-                    <InputText id="algoritmo" v-model="form.algoritmo" class="w-full form-input"
-                        placeholder="Ex: TF-IDF + Similaridade de Cosseno" />
                 </div>
 
                 <div class="field">
@@ -360,6 +372,99 @@ async function executarReanalise(id) {
                         :loading="saving" class="btn-primary-custom" />
                 </div>
             </form>
+        </Dialog>
+
+        <!-- Diálogo para Ver Detalhes e Trechos Encontrados -->
+        <Dialog v-model:visible="showDetalhes" header="Detalhes da Análise de Similaridade" modal
+            :style="{ width: 'min(95vw, 750px)' }">
+            <div v-if="loadingDetalhes" class="flex flex-col items-center justify-center p-8 gap-3">
+                <i class="pi pi-spin pi-spinner text-3xl text-blue-600"></i>
+                <span class="text-sm text-slate-500">A carregar detalhes da análise...</span>
+            </div>
+
+            <div v-else-if="analiseSelecionada" class="detalhes-content flex flex-col gap-4 max-h-[75vh] overflow-y-auto pr-1">
+                <!-- Informações Principais -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div>
+                        <span class="text-xs text-slate-500 font-medium block">Monografia</span>
+                        <strong class="text-slate-800">{{ analiseSelecionada.monografia_titulo || '—' }} (v{{ analiseSelecionada.numero_versao || 1 }})</strong>
+                    </div>
+                    <div>
+                        <span class="text-xs text-slate-500 font-medium block">Estudante</span>
+                        <strong class="text-slate-800">{{ analiseSelecionada.estudante_nome || '—' }}</strong>
+                    </div>
+                    <div>
+                        <span class="text-xs text-slate-500 font-medium block">Estado Atual</span>
+                        <Tag :value="rotuloEstado(analiseSelecionada.estado)" :severity="severityEstado(analiseSelecionada.estado)" />
+                    </div>
+                    <div>
+                        <span class="text-xs text-slate-500 font-medium block">Concluído em</span>
+                        <span class="text-slate-700 text-sm">{{ formatarData(analiseSelecionada.data_conclusao) }}</span>
+                    </div>
+                </div>
+
+                <!-- Métricas de Similaridade -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 border rounded-xl bg-white flex flex-col justify-center items-center text-center">
+                        <span class="text-xs text-slate-500 font-medium mb-1">Taxa de Similaridade Geral</span>
+                        <h2 class="text-2xl font-bold" :class="Number(analiseSelecionada.similaridade_geral) > 30 ? 'text-red-600' : 'text-emerald-600'">
+                            {{ analiseSelecionada.similaridade_geral !== undefined && analiseSelecionada.similaridade_geral !== null ? `${analiseSelecionada.similaridade_geral}%` : '—' }}
+                        </h2>
+                    </div>
+                    <div class="p-4 border rounded-xl bg-white flex flex-col justify-center items-center text-center">
+                        <span class="text-xs text-slate-500 font-medium mb-1">Classificação</span>
+                        <h3 class="text-lg font-semibold text-slate-800">
+                            {{ analiseSelecionada.classificacao || 'Não classificado' }}
+                        </h3>
+                    </div>
+                </div>
+
+                <!-- Lista de Resultados e Trechos Encontrados -->
+                <div v-if="analiseSelecionada.resultados && analiseSelecionada.resultados.length > 0" class="flex flex-col gap-3 mt-2">
+                    <h3 class="font-bold text-slate-800 text-base">Documentos e Trechos Semelhantes Encontrados</h3>
+                    
+                    <div v-for="res in analiseSelecionada.resultados" :key="res.id" class="border rounded-xl p-4 bg-slate-50 border-slate-200 flex flex-col gap-3">
+                        <div class="flex items-center justify-between border-b pb-2">
+                            <div>
+                                <span class="text-xs text-slate-500 block">Documento Comparado</span>
+                                <strong class="text-slate-800 text-sm">{{ res.documento_titulo }} (Autor: {{ res.documento_autor || 'Desconhecido' }})</strong>
+                            </div>
+                            <div class="text-right">
+                                <Tag severity="danger" :value="`${res.percentual_similaridade}% Similaridade`" />
+                                <span class="text-xs text-slate-500 block mt-1">{{ res.quantidade_trechos }} trecho(s) detetado(s)</span>
+                            </div>
+                        </div>
+
+                        <!-- Trechos Encontrados -->
+                        <div v-if="res.trechos && res.trechos.length > 0" class="flex flex-col gap-2">
+                            <span class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Trechos Correspondentes:</span>
+                            
+                            <div v-for="(trecho, index) in res.trechos" :key="index" class="bg-white p-3 rounded-lg border border-slate-200 text-xs flex flex-col gap-1.5">
+                                <div class="flex justify-between text-slate-400 font-mono text-[10px]">
+                                    <span>Trecho #{{ index + 1 }}</span>
+                                    <span>Similaridade: {{ trecho.percentual_similaridade }}%</span>
+                                </div>
+                                <div class="bg-amber-50 p-2 rounded text-slate-700 border-l-2 border-amber-400">
+                                    <strong class="text-[11px] text-amber-900 block mb-0.5">Texto Origem:</strong>
+                                    {{ trecho.texto_documento_origem }}
+                                </div>
+                                <div class="bg-blue-50 p-2 rounded text-slate-700 border-l-2 border-blue-400">
+                                    <strong class="text-[11px] text-blue-900 block mb-0.5">Texto Comparado:</strong>
+                                    {{ trecho.texto_documento_comparado }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else class="p-4 text-center bg-slate-50 rounded-xl border text-slate-500 text-sm">
+                    Nenhum trecho ou cruzamento documental registado nesta análise.
+                </div>
+            </div>
+
+            <template #footer>
+                <Button label="Fechar" severity="secondary" outlined @click="showDetalhes = false" />
+            </template>
         </Dialog>
 
         <div v-if="error" class="p-3 text-red-500 bg-red-50 rounded mt-4 border border-red-200">Erro: {{ error }}</div>
@@ -511,10 +616,6 @@ async function executarReanalise(id) {
     font-weight: 500;
     color: #334155;
     font-size: 0.9rem;
-}
-
-.form-input {
-    height: 48px;
 }
 
 .w-full {

@@ -15,7 +15,7 @@ import string
 import unicodedata
 from typing import List, Dict, Any, Optional
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, Form
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import base64
@@ -241,47 +241,87 @@ def root():
 def health():
     return {"status": "ok"}
 
+# import base64
+# import json
+# from typing import Optional
+
+# from fastapi import File, HTTPException, Request, UploadFile
+
 
 @app.post("/extract-text")
 async def extract_text(
-    file: UploadFile = File(None),
-    request: ExtractTextRequest = None,
+    request: Request,
+    file: Optional[UploadFile] = File(None),
 ):
-    """Extrai texto de um ficheiro PDF ou Word (multipart) ou via JSON base64."""
+    """Extrai texto de PDF ou Word via multipart ou JSON base64."""
+
     conteudo: Optional[bytes] = None
-    nome: str = "documento"
+    nome = "documento"
 
     if file is not None:
         conteudo = await file.read()
         nome = file.filename or "documento"
-    elif request is not None:
-        try:
-            conteudo = base64.b64decode(request.conteudo_base64)
-        except Exception:
-            raise HTTPException(status_code=400, detail="conteudo_base64 inválido.")
-        nome = request.filename or "documento"
+
     else:
+        try:
+            body = await request.json()
+        except (json.JSONDecodeError, ValueError):
+            raise HTTPException(
+                status_code=400,
+                detail="Envie um ficheiro ou um JSON válido com conteudo_base64."
+            )
+
+        conteudo_base64 = body.get("conteudo_base64")
+
+        if not conteudo_base64:
+            raise HTTPException(
+                status_code=400,
+                detail="Envie um ficheiro ou conteudo_base64."
+            )
+
+        try:
+            conteudo = base64.b64decode(
+                conteudo_base64,
+                validate=True
+            )
+        except Exception:
+            raise HTTPException(
+                status_code=400,
+                detail="conteudo_base64 inválido."
+            )
+
+        nome = body.get("filename") or "documento"
+
+    if not conteudo:
         raise HTTPException(
-            status_code=400, detail="Envie um ficheiro ou conteudo_base64."
+            status_code=400,
+            detail="O ficheiro enviado está vazio."
         )
 
-    nome_lower = (nome or "").lower()
+    nome_lower = nome.lower()
 
     try:
         if nome_lower.endswith(".pdf"):
             texto = extrair_texto_pdf(conteudo)
-        elif nome_lower.endswith((".docx", ".doc")):
+        elif nome_lower.endswith(".docx"):
             texto = extrair_texto_docx(conteudo)
+        elif nome_lower.endswith(".doc"):
+            raise HTTPException(
+                status_code=400,
+                detail="O formato DOC antigo não é suportado pelo extrator actual. Converta o ficheiro para DOCX ou PDF."
+            )
         else:
             raise HTTPException(
                 status_code=400,
-                detail="Formato não suportado. Envie PDF ou DOCX.",
+                detail="Formato não suportado. Envie PDF ou DOCX."
             )
+
     except HTTPException:
         raise
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(
-            status_code=500, detail=f"Erro ao extrair texto: {str(exc)}"
+            status_code=500,
+            detail=f"Erro ao extrair texto: {str(exc)}"
         )
 
     return {

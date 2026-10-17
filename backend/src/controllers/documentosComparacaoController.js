@@ -1,5 +1,9 @@
 const pool = require('../config/db');
-
+const fs = require('fs/promises');
+const {
+    extrairTexto,
+    preprocessarTexto
+} = require('../services/pythonService');
 /**
  * @swagger
  * tags:
@@ -83,75 +87,127 @@ const getDocumentoComparacaoById = async (req, res, next) => {
     } catch (error) { next(error); }
 };
 
-// const createDocumentoComparacao = async (req, res, next) => {
-//     try {
-//         const { titulo, autor, ano, curso_id, nome_ficheiro, caminho_ficheiro,
-//                 hash_sha256, texto_extraido, texto_processado, ativo,
-//                 excluir_da_comparacao, motivo_exclusao, criado_por } = req.body;
-//         if (!titulo) {
-//             return res.status(400).json({ success: false, message: 'O título é obrigatório.' });
-//         }
-//         const [resultado] = await pool.query(
-//             `INSERT INTO documentos_comparacao (titulo, autor, ano, curso_id, nome_ficheiro,
-//                     caminho_ficheiro, hash_sha256, texto_extraido, texto_processado, ativo,
-//                     excluir_da_comparacao, motivo_exclusao, criado_por)
-//              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-//             [
-//                 titulo, autor || null, ano || null, curso_id || null,
-//                 nome_ficheiro || null, caminho_ficheiro || null, hash_sha256 || null,
-//                 texto_extraido || null, texto_processado || null,
-//                 ativo !== undefined ? (ativo === '1' || ativo === true ? 1 : 0) : 1,
-//                 excluir_da_comparacao === '1' || excluir_da_comparacao === true ? 1 : 0,
-//                 motivo_exclusao || null, criado_por || null
-//             ]
-//         );
-//         const [documento] = await pool.query(
-//             `SELECT dc.*, c.nome AS curso_nome FROM documentos_comparacao dc
-//              LEFT JOIN cursos c ON c.id = dc.curso_id WHERE dc.id = ?`,
-//             [resultado.insertId]
-//         );
-//         return res.status(201).json({ success: true, message: 'Documento adicionado com sucesso.', data: documento[0] });
-//     } catch (error) { next(error); }
-// };
 
 const createDocumentoComparacao = async (req, res, next) => {
-    try {
-        // Garante que req.body existe para evitar o TypeError caso venha totalmente vazio
-        const body = req.body || {};
-        const { titulo, autor, ano, curso_id, hash_sha256, texto_extraido, 
-                texto_processado, ativo, excluir_da_comparacao, motivo_exclusao, criado_por } = body;
 
-        if (!titulo) {
-            return res.status(400).json({ success: false, message: 'O título é obrigatório.' });
+    try {
+        const body = req.body || {};
+        const {
+            titulo,
+            autor,
+            ano,
+            curso_id,
+            ativo,
+            excluir_da_comparacao,
+            motivo_exclusao,
+            criado_por
+        } = body;
+
+        if (!titulo || !titulo.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: 'O título é obrigatório.'
+            });
         }
 
-        // Se estiveres a usar multer, podes recolher o nome e caminho direto do req.file
-        const nome_ficheiro = req.file ? req.file.originalname : (body.nome_ficheiro || null);
-        const caminho_ficheiro = req.file ? req.file.path : (body.caminho_ficheiro || null);
+        // O ficheiro deve ser enviado no campo "ficheiro"
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'Nenhum ficheiro recebido. Envie um PDF, DOC ou DOCX no campo ficheiro.'
+            });
+        }
 
+        // Ler o ficheiro guardado pelo Multer
+        const buffer = await fs.readFile(req.file.path);
+
+        // Extrair o texto através do serviço Python
+        const extraido = await extrairTexto(
+            buffer,
+            req.file.originalname
+        );
+
+        const textoExtraido = extraido.texto || '';
+
+        if (!textoExtraido.trim()) {
+            return res.status(422).json({
+                success: false,
+                message: 'Não foi possível extrair texto do documento. Verifique o ficheiro.'
+            });
+        }
+
+        // Pré-processar o texto para comparação
+        const processado = await preprocessarTexto(
+            textoExtraido,
+            { ignorar_secicoes: true }
+        );
+
+        const textoProcessado =
+            processado.texto_processado || textoExtraido;
+        console.log('Dados recebidos:', req.body);
+        console.log('Ficheiro recebido:', req.file);
+        // Guardar os metadados, o caminho e os textos
         const [resultado] = await pool.query(
-            `INSERT INTO documentos_comparacao (titulo, autor, ano, curso_id, nome_ficheiro,
-                    caminho_ficheiro, hash_sha256, texto_extraido, texto_processado, ativo,
-                    excluir_da_comparacao, motivo_exclusao, criado_por)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO documentos_comparacao (
+                titulo,
+                autor,
+                ano,
+                curso_id,
+                nome_ficheiro,
+                caminho_ficheiro,
+                texto_extraido,
+                texto_processado,
+                ativo,
+                excluir_da_comparacao,
+                motivo_exclusao,
+                criado_por
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                titulo, autor || null, ano || null, curso_id || null,
-                nome_ficheiro, caminho_ficheiro, hash_sha256 || null,
-                texto_extraido || null, texto_processado || null,
-                ativo !== undefined ? (ativo === '1' || ativo === true ? 1 : 0) : 1,
-                excluir_da_comparacao === '1' || excluir_da_comparacao === true ? 1 : 0,
-                motivo_exclusao || null, criado_por || null
+                titulo.trim(),
+                autor || null,
+                ano || null,
+                curso_id || null,
+                req.file.originalname,
+                req.file.path,
+                textoExtraido,
+                textoProcessado,
+                ativo !== undefined
+                    ? (ativo === '1' || ativo === true ? 1 : 0)
+                    : 1,
+                excluir_da_comparacao === '1' ||
+                    excluir_da_comparacao === true ? 1 : 0,
+                motivo_exclusao || null,
+                criado_por || null
             ]
         );
-        
-        const [documento] = await pool.query(
-            `SELECT dc.*, c.nome AS curso_nome FROM documentos_comparacao dc
-             LEFT JOIN cursos c ON c.id = dc.curso_id WHERE dc.id = ?`,
+
+        const [documentos] = await pool.query(
+            `SELECT id, titulo, autor, ano, curso_id,
+                    nome_ficheiro, caminho_ficheiro,
+                    LENGTH(texto_extraido) AS tamanho_extraido,
+                    LENGTH(texto_processado) AS tamanho_processado,
+                    ativo, excluir_da_comparacao
+             FROM documentos_comparacao
+             WHERE id = ?`,
             [resultado.insertId]
         );
-        return res.status(201).json({ success: true, message: 'Documento adicionado com sucesso.', data: documento[0] });
-    } catch (error) { next(error); }
+
+        return res.status(201).json({
+            success: true,
+            message: 'Documento carregado e preparado para comparação.',
+            data: documentos[0]
+        });
+
+    } catch (error) {
+        console.error(
+            'Erro ao cadastrar documento de comparação:',
+            error.response?.data || error.message
+        );
+
+        next(error);
+    }
 };
+
 
 const updateDocumentoComparacao = async (req, res, next) => {
     try {

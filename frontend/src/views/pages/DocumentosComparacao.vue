@@ -161,52 +161,102 @@ function removerFicheiro() {
     form.ficheiro = null;
 }
 
+
 async function salvar() {
-    if (!form.titulo) {
-        toast.add({ severity: 'warn', summary: 'Atenção', detail: 'O título do documento é obrigatório.', life: 4000 });
+    if (!form.titulo?.trim()) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Atenção',
+            detail: 'O título do documento é obrigatório.',
+            life: 4000
+        });
+        return;
+    }
+
+    if (!modoEdicao.value && !form.ficheiro) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Atenção',
+            detail: 'Selecione o ficheiro do documento.',
+            life: 4000
+        });
         return;
     }
 
     saving.value = true;
+
     try {
         const fd = new FormData();
+
         fd.append('titulo', form.titulo.trim());
         fd.append('autor', form.autor?.trim() || '');
-        fd.append('ano', form.ano || '');
-        fd.append('curso_id', form.curso_id || '');
-        fd.append('nome_ficheiro', form.nome_ficheiro || '');
-        fd.append('caminho_ficheiro', form.caminho_ficheiro || '');
+        fd.append('ano', form.ano != null ? String(form.ano) : '');
+        fd.append('curso_id', form.curso_id != null
+            ? String(form.curso_id)
+            : '');
+
         fd.append('hash_sha256', form.hash_sha256?.trim() || '');
-        fd.append('texto_extraido', form.texto_extraido || '');
-        fd.append('texto_processado', form.texto_processado || '');
         fd.append('ativo', form.ativo ? '1' : '0');
-        fd.append('excluir_da_comparacao', form.excluir_da_comparacao ? '1' : '0');
-        fd.append('motivo_exclusao', form.motivo_exclusao?.trim() || '');
-        fd.append('criado_por', form.criado_por || '');
-        if (form.ficheiro) fd.append('ficheiro', form.ficheiro);
+        fd.append(
+            'excluir_da_comparacao',
+            form.excluir_da_comparacao ? '1' : '0'
+        );
+        fd.append(
+            'motivo_exclusao',
+            form.motivo_exclusao?.trim() || ''
+        );
+
+        if (form.ficheiro) {
+            fd.append('ficheiro', form.ficheiro);
+        }
 
         const resposta = modoEdicao.value
             ? await actualizar(form.id, fd)
             : await criar(fd);
 
         if (operacaoBemSucedida(resposta)) {
-            toast.add({ 
-                severity: 'success', 
-                summary: 'Sucesso', 
-                detail: modoEdicao.value ? 'Documento actualizado com sucesso.' : 'Documento criado com sucesso.', 
-                life: 4000 
+            toast.add({
+                severity: 'success',
+                summary: 'Sucesso',
+                detail: modoEdicao.value
+                    ? 'Documento actualizado com sucesso.'
+                    : 'Documento criado com sucesso.',
+                life: 4000
             });
+
             showForm.value = false;
             await carregarDados();
         } else {
-            toast.add({ severity: 'error', summary: 'Erro', detail: mensagemErro(resposta, 'Erro ao guardar documento.'), life: 5000 });
+            toast.add({
+                severity: 'error',
+                summary: 'Erro',
+                detail: mensagemErro(
+                    resposta,
+                    'Erro ao guardar documento.'
+                ),
+                life: 5000
+            });
         }
     } catch (err) {
-        toast.add({ severity: 'error', summary: 'Erro', detail: mensagemErro(err?.response ?? err, 'Erro ao guardar documento.'), life: 5000 });
+        console.error(
+            'Erro ao guardar documento:',
+            err.response?.data || err
+        );
+
+        toast.add({
+            severity: 'error',
+            summary: 'Erro',
+            detail: mensagemErro(
+                err?.response ?? err,
+                'Erro ao guardar documento.'
+            ),
+            life: 5000
+        });
     } finally {
         saving.value = false;
     }
 }
+
 
 function confirmarRemocao(id) {
     confirm.require({

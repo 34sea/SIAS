@@ -272,7 +272,7 @@ const createAnalise = async (req, res, next) => {
                         quantidade_trechos, posicao_ranking)
                  VALUES (?, ?, ?, ?, ?)`,
                 [analiseFinalId, r.documento_id, r.percentual_similaridade,
-                 r.quantidade_trechos || 0, r.posicao_ranking || 0]
+                    r.quantidade_trechos || 0, r.posicao_ranking || 0]
             );
             const resultadoId = resResultado.insertId;
             for (const t of (r.trechos || [])) {
@@ -296,11 +296,23 @@ const createAnalise = async (req, res, next) => {
             }
         }
 
+        // return res.status(201).json({
+        //     success: true,
+        //     message: 'Análise concluída com sucesso.',
+        //     data: { id: analiseFinalId, similaridade_geral, classificacao }
+        // });
+
+
         return res.status(201).json({
             success: true,
             message: 'Análise concluída com sucesso.',
-            data: { id: analiseFinalId, similaridade_geral, classificacao }
+            data: {
+                id: analiseFinalId,
+                similaridade_geral: similaridadeGeral,
+                classificacao: classificacao
+            }
         });
+
     } catch (error) {
         next(error);
     } finally {

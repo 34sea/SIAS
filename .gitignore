@@ -41,6 +41,7 @@ backend/dist
 backend/dist-ssr
 backend/*.local
 backend/src/uploads
+backend/uploads
 
 # Editor directories and files
 backend/.vscode/*
