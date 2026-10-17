@@ -83,14 +83,52 @@ const getDocumentoComparacaoById = async (req, res, next) => {
     } catch (error) { next(error); }
 };
 
+// const createDocumentoComparacao = async (req, res, next) => {
+//     try {
+//         const { titulo, autor, ano, curso_id, nome_ficheiro, caminho_ficheiro,
+//                 hash_sha256, texto_extraido, texto_processado, ativo,
+//                 excluir_da_comparacao, motivo_exclusao, criado_por } = req.body;
+//         if (!titulo) {
+//             return res.status(400).json({ success: false, message: 'O título é obrigatório.' });
+//         }
+//         const [resultado] = await pool.query(
+//             `INSERT INTO documentos_comparacao (titulo, autor, ano, curso_id, nome_ficheiro,
+//                     caminho_ficheiro, hash_sha256, texto_extraido, texto_processado, ativo,
+//                     excluir_da_comparacao, motivo_exclusao, criado_por)
+//              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+//             [
+//                 titulo, autor || null, ano || null, curso_id || null,
+//                 nome_ficheiro || null, caminho_ficheiro || null, hash_sha256 || null,
+//                 texto_extraido || null, texto_processado || null,
+//                 ativo !== undefined ? (ativo === '1' || ativo === true ? 1 : 0) : 1,
+//                 excluir_da_comparacao === '1' || excluir_da_comparacao === true ? 1 : 0,
+//                 motivo_exclusao || null, criado_por || null
+//             ]
+//         );
+//         const [documento] = await pool.query(
+//             `SELECT dc.*, c.nome AS curso_nome FROM documentos_comparacao dc
+//              LEFT JOIN cursos c ON c.id = dc.curso_id WHERE dc.id = ?`,
+//             [resultado.insertId]
+//         );
+//         return res.status(201).json({ success: true, message: 'Documento adicionado com sucesso.', data: documento[0] });
+//     } catch (error) { next(error); }
+// };
+
 const createDocumentoComparacao = async (req, res, next) => {
     try {
-        const { titulo, autor, ano, curso_id, nome_ficheiro, caminho_ficheiro,
-                hash_sha256, texto_extraido, texto_processado, ativo,
-                excluir_da_comparacao, motivo_exclusao, criado_por } = req.body;
+        // Garante que req.body existe para evitar o TypeError caso venha totalmente vazio
+        const body = req.body || {};
+        const { titulo, autor, ano, curso_id, hash_sha256, texto_extraido, 
+                texto_processado, ativo, excluir_da_comparacao, motivo_exclusao, criado_por } = body;
+
         if (!titulo) {
             return res.status(400).json({ success: false, message: 'O título é obrigatório.' });
         }
+
+        // Se estiveres a usar multer, podes recolher o nome e caminho direto do req.file
+        const nome_ficheiro = req.file ? req.file.originalname : (body.nome_ficheiro || null);
+        const caminho_ficheiro = req.file ? req.file.path : (body.caminho_ficheiro || null);
+
         const [resultado] = await pool.query(
             `INSERT INTO documentos_comparacao (titulo, autor, ano, curso_id, nome_ficheiro,
                     caminho_ficheiro, hash_sha256, texto_extraido, texto_processado, ativo,
@@ -98,13 +136,14 @@ const createDocumentoComparacao = async (req, res, next) => {
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 titulo, autor || null, ano || null, curso_id || null,
-                nome_ficheiro || null, caminho_ficheiro || null, hash_sha256 || null,
+                nome_ficheiro, caminho_ficheiro, hash_sha256 || null,
                 texto_extraido || null, texto_processado || null,
                 ativo !== undefined ? (ativo === '1' || ativo === true ? 1 : 0) : 1,
                 excluir_da_comparacao === '1' || excluir_da_comparacao === true ? 1 : 0,
                 motivo_exclusao || null, criado_por || null
             ]
         );
+        
         const [documento] = await pool.query(
             `SELECT dc.*, c.nome AS curso_nome FROM documentos_comparacao dc
              LEFT JOIN cursos c ON c.id = dc.curso_id WHERE dc.id = ?`,

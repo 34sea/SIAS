@@ -7,7 +7,8 @@ const axios = require('axios');
  * Nota: o envio de ficheiros é feito como base64 em JSON para evitar
  * dependências adicionais (ex. form-data) no backend Node.js.
  */
-const PYTHON_BASE_URL = process.env.PYTHON_API_URL || 'http://python_analysis:8000';
+const PYTHON_BASE_URL = 'http://python_analysis:8000';
+// const PYTHON_BASE_URL = process.env.PYTHON_API_URL || 'http://python_analysis:8000';
 
 const client = axios.create({
     baseURL: PYTHON_BASE_URL,
@@ -67,10 +68,31 @@ async function calcularSimilaridade(textoA, textoB) {
  *   { texto_origem, documentos: [{id, texto}], config: {...} }
  * @returns {Promise<{similaridade_geral, classificacao, resultados: [...] }>}
  */
+
 async function analisarSimilaridade(payload) {
-    const response = await client.post('/analyze', payload);
-    return response.data;
+    try {
+        console.log('A chamar Python:', `${PYTHON_BASE_URL}/analyze`);
+        console.log('Tamanho do texto de origem:', payload.texto_origem?.length ?? 0);
+        console.log('Quantidade de documentos:', payload.documentos?.length ?? 0);
+        console.log('Configuração:', payload.config);
+
+        const response = await client.post('/analyze', payload);
+        return response.data;
+    } catch (error) {
+        console.error('Erro na análise Python:');
+        console.error('Status:', error.response?.status);
+        console.error(
+            'Resposta do Python:',
+            JSON.stringify(error.response?.data, null, 2)
+        );
+        throw error;
+    }
 }
+
+// async function analisarSimilaridade(payload) {
+//     const response = await client.post('/analyze', payload);
+//     return response.data;
+// }
 
 /**
  * Verifica se o serviço de análise está disponível.

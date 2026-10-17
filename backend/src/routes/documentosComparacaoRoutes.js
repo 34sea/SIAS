@@ -10,6 +10,7 @@ const {
 const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
 const permissionMiddleware = require('../middlewares/permissionMiddleware');
+const upload = require('../middlewares/uploadMiddleware'); // <-- 1. Importa o teu multer aqui (ajusta o caminho se necessário)
 
 const router = express.Router();
 
@@ -23,7 +24,7 @@ router.get(
 );
 
 router.get(
-    '/:id',
+    '/',
     roleMiddleware('ADMIN', 'DOCENTE'),
     permissionMiddleware('DOCUMENTOS_GERIR'),
     getDocumentoComparacaoById
@@ -33,6 +34,7 @@ router.post(
     '/',
     roleMiddleware('ADMIN'),
     permissionMiddleware('DOCUMENTOS_GERIR'),
+    upload.single('ficheiro'), // <-- 2. Adicionado aqui para processar o ficheiro e popular o req.body
     createDocumentoComparacao
 );
 
@@ -40,6 +42,7 @@ router.put(
     '/:id',
     roleMiddleware('ADMIN'),
     permissionMiddleware('DOCUMENTOS_GERIR'),
+    upload.single('ficheiro'), // <-- 3. Adicionado aqui também para atualizações com novo ficheiro
     updateDocumentoComparacao
 );
 

@@ -7,114 +7,44 @@ const pool = require('../config/db');
  *     description: Gestão dos cursos da instituição
  */
 
-/**
- * @swagger
- * /api/cursos:
- *   get:
- *     summary: Listar cursos
- *     tags: [Cursos]
- *     security: - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: search
- *         schema: { type: string }
- *       - in: query
- *         name: ativo
- *         schema: { type: string, enum: [ACTIVO, INACTIVO] }
- *     responses:
- *       200: { description: Lista de cursos obtida com sucesso. }
- *   post:
- *     summary: Criar curso
- *     tags: [Cursos]
- *     security: - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [nome, codigo]
- *             properties:
- *               nome: { type: string, example: "Engenharia Informática" }
- *               codigo: { type: string, example: "ENG-INF" }
- *               descricao: { type: string, example: "Curso de engenharia" }
- *               ativo: { type: boolean, example: true }
- *     responses:
- *       201: { description: Curso criado com sucesso. }
- */
 const getCursos = async (req, res, next) => {
     try {
         const { search = '', ativo } = req.query;
-        let sql = `SELECT id, nome, codigo, descricao, ativo, criado_em, atualizado_em FROM cursos WHERE 1=1`;
+        let sql = `
+            SELECT c.id, c.nome, c.codigo, c.descricao, c.ativo, c.criado_em, c.atualizado_em,
+                   COUNT(e.id) AS total_estudantes
+            FROM cursos c
+            LEFT JOIN estudantes e ON e.curso_id = c.id
+            WHERE 1=1
+        `;
         const params = [];
         if (search.trim() !== '') {
-            sql += ` AND (nome LIKE ? OR codigo LIKE ?)`;
+            sql += ` AND (c.nome LIKE ? OR c.codigo LIKE ? OR c.descricao LIKE ?)`;
             const v = `%${search.trim()}%`;
-            params.push(v, v);
+            params.push(v, v, v);
         }
-        if (ativo !== undefined) {
-            sql += ` AND ativo = ?`;
-            params.push(ativo === '1' || ativo === true ? 1 : 0);
+        if (ativo !== undefined && ativo !== '') {
+            sql += ` AND c.ativo = ?`;
+            params.push(ativo === '1' || ativo === 'true' || ativo === true ? 1 : 0);
         }
-        sql += ` ORDER BY nome ASC`;
+        sql += ` GROUP BY c.id ORDER BY c.nome ASC`;
         const [cursos] = await pool.query(sql, params);
         return res.status(200).json({ success: true, total: cursos.length, data: cursos });
     } catch (error) { next(error); }
 };
 
-/**
- * @swagger
- * /api/cursos/{id}:
- *   get:
- *     summary: Obter curso por ID
- *     tags: [Cursos]
- *     security: - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: integer }
- *     responses:
- *       200: { description: Curso encontrado. }
- *       404: { description: Curso não encontrado. }
- *   put:
- *     summary: Actualizar curso
- *     tags: [Cursos]
- *     security: - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: integer }
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               nome: { type: string }
- *               codigo: { type: string }
- *               descricao: { type: string }
- *               ativo: { type: boolean }
- *     responses:
- *       200: { description: Curso actualizado com sucesso. }
- *   delete:
- *     summary: Eliminar curso
- *     tags: [Cursos]
- *     security: - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: integer }
- *     responses:
- *       200: { description: Curso eliminado com sucesso. }
- */
 const getCursoById = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const [rows] = await pool.query(`SELECT * FROM cursos WHERE id = ? LIMIT 1`, [id]);
+        const [rows] = await pool.query(
+            `SELECT c.*, COUNT(e.id) AS total_estudantes
+             FROM cursos c
+             LEFT JOIN estudantes e ON e.curso_id = c.id
+             WHERE c.id = ? 
+             GROUP BY c.id 
+             LIMIT 1`,
+            [id]
+        );
         if (rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Curso não encontrado.' });
         }
@@ -132,11 +62,17 @@ const createCurso = async (req, res, next) => {
         if (existente.length > 0) {
             return res.status(409).json({ success: false, message: 'Já existe um curso com este código ou nome.' });
         }
+
+        const statusAtivo = ativo !== undefined ? (ativo === 1 || ativo === '1' || ativo === true || ativo === 'true' ? 1 : 0) : 1;
+
         const [resultado] = await pool.query(
             `INSERT INTO cursos (nome, codigo, descricao, ativo) VALUES (?, ?, ?, ?)`,
-            [nome, codigo, descricao || null, ativo !== undefined ? (ativo === '1' || ativo === true ? 1 : 0) : 1]
+            [nome.trim(), codigo.trim(), descricao?.trim() || null, statusAtivo]
         );
-        const [curso] = await pool.query(`SELECT * FROM cursos WHERE id = ?`, [resultado.insertId]);
+        const [curso] = await pool.query(
+            `SELECT c.*, COUNT(e.id) AS total_estudantes FROM cursos c LEFT JOIN estudantes e ON e.curso_id = c.id WHERE c.id = ? GROUP BY c.id`,
+            [resultado.insertId]
+        );
         return res.status(201).json({ success: true, message: 'Curso criado com sucesso.', data: curso[0] });
     } catch (error) { next(error); }
 };
@@ -151,16 +87,22 @@ const updateCurso = async (req, res, next) => {
         }
         const campos = [];
         const valores = [];
-        if (nome !== undefined) { campos.push('nome = ?'); valores.push(nome); }
-        if (codigo !== undefined) { campos.push('codigo = ?'); valores.push(codigo); }
-        if (descricao !== undefined) { campos.push('descricao = ?'); valores.push(descricao); }
-        if (ativo !== undefined) { campos.push('ativo = ?'); valores.push(ativo === '1' || ativo === true ? 1 : 0); }
+        if (nome !== undefined) { campos.push('nome = ?'); valores.push(nome.trim()); }
+        if (codigo !== undefined) { campos.push('codigo = ?'); valores.push(codigo.trim()); }
+        if (descricao !== undefined) { campos.push('descricao = ?'); valores.push(descricao?.trim() || null); }
+        if (ativo !== undefined) { 
+            campos.push('ativo = ?'); 
+            valores.push(ativo === 1 || ativo === '1' || ativo === true || ativo === 'true' ? 1 : 0); 
+        }
         if (campos.length === 0) {
             return res.status(400).json({ success: false, message: 'Nenhum campo enviado para actualização.' });
         }
         valores.push(id);
         await pool.query(`UPDATE cursos SET ${campos.join(', ')} WHERE id = ?`, valores);
-        const [curso] = await pool.query(`SELECT * FROM cursos WHERE id = ?`, [id]);
+        const [curso] = await pool.query(
+            `SELECT c.*, COUNT(e.id) AS total_estudantes FROM cursos c LEFT JOIN estudantes e ON e.curso_id = c.id WHERE c.id = ? GROUP BY c.id`,
+            [id]
+        );
         return res.status(200).json({ success: true, message: 'Curso actualizado com sucesso.', data: curso[0] });
     } catch (error) { next(error); }
 };

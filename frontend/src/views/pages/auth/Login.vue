@@ -34,52 +34,105 @@ const handleLogin = async () => {
         loading.value = false;
     }
 };
-
 </script>
 
 <template>
     <FloatingConfigurator />
-    <div
-        class="login-container flex items-center justify-center min-h-screen min-w-[100vw] overflow-hidden">
-        <div class="flex flex-col items-center justify-center">
-            <div
-                style="border-radius: 56px; padding: 0.3rem; background: linear-gradient(180deg, var(--sias-primary) 10%, rgba(33, 150, 243, 0) 30%)">
-                <div class="w-full bg-surface-0 dark:bg-surface-900 py-20 px-8 sm:px-20" style="border-radius: 53px">
-                    <div class="text-center mb-8">
-                        <div class="text-sias-text-primary text-3xl font-bold mb-4">SIAS</div>
-                        <span class="text-sias-text-secondary font-medium">Sistema Inteligente para Análise de Similaridade</span>
-                        <div v-if="error" class="text-red-500 mt-2">{{ error }}</div>
+    <!-- Fundo geral branco que ocupa o ecrã inteiro e centra o cartão -->
+    <div class="login-container flex items-center justify-center min-h-screen w-screen overflow-hidden bg-gray-50">
+        
+        <!-- Cartão Principal Centralizado (com sombra e cantos arredondados) -->
+        <div class="flex flex-col lg:flex-row w-full max-w-5xl mx-4 bg-white rounded-2xl shadow-2xl overflow-hidden min-h-[600px]">
+            
+            <!-- Lado Esquerdo: Painel Azul (Ocupa metade do cartão) -->
+            <div class="hidden lg:flex lg:w-1/2 flex-col justify-between p-10 bg-blue-600 text-white relative">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl font-bold tracking-wider">SIAS</span>
+                </div>
+
+                <div class="flex flex-col items-center text-center my-auto px-4">
+                    <div class="mb-6 p-5 bg-blue-500/30 rounded-full backdrop-blur-sm">
+                        <i class="pi pi-chart-line text-5xl text-white"></i>
+                    </div>
+                    <h1 class="text-3xl font-bold mb-3" style="color: white;">Bem-vindo ao SIAS!</h1>
+                    <p class="text-blue-100 text-sm max-w-sm">
+                        Sistema Inteligente para Análise de Similaridade de Monografias e Trabalhos Académicos.
+                    </p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <span class="w-6 h-1.5 bg-white rounded-full"></span>
+                    <span class="w-1.5 h-1.5 bg-white/50 rounded-full"></span>
+                    <span class="w-1.5 h-1.5 bg-white/50 rounded-full"></span>
+                </div>
+            </div>
+
+            <!-- Lado Direito: Formulário com fundo branco (Ocupa a outra metade do cartão) -->
+            <div class="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 bg-white">
+                <div class="w-full max-w-md">
+                    <div class="mb-6">
+                        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Iniciar Sessão</h2>
+                        <p class="text-gray-500 text-sm">
+                            Insira as suas credenciais para aceder ao painel.
+                        </p>
+                        <div v-if="error" class="p-3 mt-3 text-sm text-red-500 bg-red-50 rounded-lg">
+                            {{ error }}
+                        </div>
                     </div>
 
-                    <div>
-                        <label for="email1" class="block text-sias-text-secondary text-xl font-medium mb-2">Email / Utilizador</label>
-                        <InputText id="email1" type="text" placeholder="admin@similaridade.co.mz" class="w-full md:w-[30rem] mb-4" v-model="email" />
+                    <div class="flex flex-col gap-4">
+                        <div>
+                            <label for="email1" class="block text-gray-700 font-medium mb-2 text-sm">Email / Utilizador</label>
+                            <InputText 
+                                id="email1" 
+                                type="text" 
+                                placeholder="admin@similaridade.co.mz" 
+                                class="w-full" 
+                                style="height: 50px;"
+                                v-model="email" 
+                            />
+                        </div>
 
-                        <label for="password1" class="block text-sias-text-secondary font-medium text-xl mb-2">Palavra-passe</label>
-                        <Password id="password1" v-model="password" placeholder="••••••••" :toggleMask="true" class="mb-4" fluid :feedback="false"></Password>
-                        <Button :label="loading ? 'Entrando...' : 'Entrar'" class="w-full mb-2" @click="handleLogin" :disabled="loading" />
+                        <div>
+                            <label for="password1" class="block text-gray-700 font-medium mb-2 text-sm">Palavra-passe</label>
+                            <Password 
+                                id="password1" 
+                                v-model="password" 
+                                placeholder="••••••••" 
+                                :toggleMask="true" 
+                                class="w-full" 
+                                style="height: 50px;"
+                                fluid 
+                                :feedback="false"
+                            />
+                        </div>
 
-                        <div class="text-center mt-4 text-xs text-sias-text-muted">
-                            Admin: admin@similaridade.co.mz / Admin@123456
+                        <Button 
+                            :label="loading ? 'A entrar...' : 'Entrar'" 
+                            class="w-full mt-2" 
+                            style="background-color: #2563eb; height: 50px;"
+                            
+                            @click="handleLogin" 
+                            :disabled="loading" 
+                        />
+
+                        <div class="text-center mt-4 text-xs text-gray-400">
+                            Credenciais de Demonstração:<br>
+                            <span class="font-mono text-gray-500">admin@similaridade.co.mz / Admin@123456</span>
                         </div>
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 </template>
 
 <style scoped>
 .login-container {
-    background: var(--sias-bg);
     min-height: 100vh;
 }
-.pi-eye {
-    transform: scale(1.6);
-    margin-right: 1rem;
-}
-.pi-eye-slash {
-    transform: scale(1.6);
-    margin-right: 1rem;
+:deep(.p-password input) {
+    width: 100%;
 }
 </style>

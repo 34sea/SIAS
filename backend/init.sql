@@ -43,7 +43,7 @@ CREATE TABLE permissoes (
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
-
+ALTER TABLE permissoes MODIFY codigo VARCHAR(100) NULL;
 INSERT INTO permissoes (codigo, nome, descricao) VALUES
 ('UTILIZADORES_VISUALIZAR', 'Visualizar utilizadores', 'Visualizar utilizadores'),
 ('UTILIZADORES_CRIAR', 'Criar utilizadores', 'Criar utilizadores'),

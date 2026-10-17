@@ -10,17 +10,18 @@
     --sias-cloud-blue: #C4D2E1;
     --sias-mist-blue: #E1E8F0;
 
-    /* Cores derivadas para o sistema */
+    /* Cores derivadas para o sistema - Versão clara */
     --sias-primary: #0A1B2E;
     --sias-primary-dark: #112A46;
     --sias-primary-light: #34506D;
-    --sias-surface: #1B3B5A;
-    --sias-surface-light: #557392;
-    --sias-text-primary: #E1E8F0;
-    --sias-text-secondary: #C4D2E1;
-    --sias-text-muted: #A1B2C4;
-    --sias-border: #34506D;
-    --sias-bg: #0A1B2E;
-    --sias-bg-light: #112A46;
-    --sias-card-bg: #112A46;
+    --sias-bg: #F5F7FA;           /* Fundo geral claro */
+    --sias-bg-light: #FFFFFF;     /* Fundo de cards */
+    --sias-card-bg: #FFFFFF;      /* Cor dos cards */
+    --sias-sidebar-bg: #0A1B2E;   /* Sidebar escura */
+    --sias-text-primary: #0A1B2E; /* Texto principal escuro */
+    --sias-text-secondary: #1B3B5A; /* Texto secundário */
+    --sias-text-muted: #557392;   /* Texto muted */
+    --sias-border: #34506D;       /* Bordas */
+    --sias-surface: #E1E8F0;      /* Superfície clara */
+    --sias-surface-dark: #112A46; /* Superfície escura (sidebar itens) */
 }

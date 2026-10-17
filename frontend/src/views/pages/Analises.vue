@@ -1,189 +1,539 @@
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { analiseService } from '@/services/analiseService';
 import { useAuth } from '@/composables/useAuth';
 import { useMonografias } from '@/composables/useMonografias';
 import { useToast } from 'primevue/usetoast';
+import { useConfirm } from 'primevue/useconfirm';
 
-const { listar, obter, executar, reanalisar, items, loading, error } = analiseService();
-const { isAuthenticated, role } = useAuth();
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
+import Textarea from 'primevue/textarea';
+import Dialog from 'primevue/dialog';
+import Dropdown from 'primevue/dropdown';
+import Tag from 'primevue/tag';
+import Toast from 'primevue/toast';
+import ConfirmDialog from 'primevue/confirmdialog';
+
+const { listar, obter, executar, reanalisar } = analiseService;
+const { role, user } = useAuth();
 const { listar: listarMonografias, items: monografiasItems } = useMonografias();
+
 const toast = useToast();
+const confirm = useConfirm();
+
+// Estados locais reativos
+const items = ref([]);
+const loading = ref(false);
+const saving = ref(false);
+const error = ref(null);
+
+const search = ref('');
+const estadoFiltro = ref('');
 
 const form = reactive({
     monografia_versao_id: '',
     algoritmo: 'TF-IDF + Similaridade de Cosseno',
-    texto_override: '',
+    texto_override: ''
 });
-const showForm = ref(false);
-const search = ref('');
-const estadoFiltro = ref('');
 
-const analisesFiltradas = computed(() =>
-    items.value.filter((a) => {
-        const matchBusca =
-            !search.value ||
-            (a.monografia_titulo && a.monografia_titulo.toLowerCase().includes(search.value.toLowerCase())) ||
-            (a.estudante_nome && a.estudante_nome.toLowerCase().includes(search.value.toLowerCase()));
+const showForm = ref(false);
+
+/* Normalizadores e Utilitários */
+function extrairLista(resposta) {
+    const corpo = resposta?.data ?? resposta;
+    if (Array.isArray(corpo)) return corpo;
+    if (Array.isArray(corpo?.data)) return corpo.data;
+    if (Array.isArray(corpo?.analises)) return corpo.analises;
+    return [];
+}
+
+function operacaoBemSucedida(resposta) {
+    const status = Number(resposta?.status ?? resposta?.statusCode ?? resposta?.data?.status);
+    return (status >= 200 && status < 300) || resposta?.success === true;
+}
+
+function mensagemErro(resposta, alternativa) {
+    const corpo = resposta?.data ?? resposta;
+    return corpo?.error || corpo?.message || resposta?.message || alternativa;
+}
+
+function formatarData(dataStr) {
+    if (!dataStr) return '—';
+    const data = new Date(dataStr);
+    return isNaN(data.getTime()) ? dataStr : data.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function severityEstado(estado) {
+    switch (estado) {
+        case 'CONCLUIDA':
+            return 'success';
+        case 'PROCESSANDO':
+            return 'warn';
+        case 'AGUARDANDO':
+            return 'info';
+        case 'ERRO':
+            return 'danger';
+        default:
+            return 'secondary';
+    }
+}
+
+function rotuloEstado(estado) {
+    const mapa = {
+        AGUARDANDO: 'Aguardando',
+        PROCESSANDO: 'Processando',
+        CONCLUIDA: 'Concluída',
+        ERRO: 'Erro'
+    };
+    return mapa[estado] || estado || '—';
+}
+
+// Estatísticas Computadas
+const totalAnalises = computed(() => items.value.length);
+const concluidasAnalises = computed(() => items.value.filter(a => a.estado === 'CONCLUIDA').length);
+const erroAnalises = computed(() => items.value.filter(a => a.estado === 'ERRO').length);
+
+const analisesFiltradas = computed(() => {
+    const termo = search.value.trim().toLowerCase();
+    return items.value.filter((a) => {
+        const matchBusca = !termo || [
+            a.monografia_titulo,
+            a.estudante_nome,
+            a.algoritmo
+        ].some(v => String(v ?? '').toLowerCase().includes(termo));
+
         const matchEstado = !estadoFiltro.value || a.estado === estadoFiltro.value;
         return matchBusca && matchEstado;
-    })
-);
-
-onMounted(async () => {
-    await listar({ search: '', estado: '' });
-    await listarMonografias();
+    });
 });
 
-async function abrirExecutar() {
-    form.monografia_versao_id = '';
-    form.algoritmo = 'TF-IDF + Similaridade de Cosseno';
-    form.texto_override = '';
+const podeExecutar = computed(() => role.value === 'ADMIN' || role.value === 'DOCENTE' || user.value?.role_nome === 'ADMIN' || user.value?.role_nome === 'DOCENTE');
+
+onMounted(async () => {
+    await carregarDados();
+});
+
+async function carregarDados() {
+    loading.value = true;
+    error.value = null;
+    try {
+        const resposta = await listar({ search: '', estado: '' });
+        items.value = extrairLista(resposta);
+        await listarMonografias();
+    } catch (err) {
+        error.value = err.message || 'Erro ao carregar análises.';
+        toast.add({ severity: 'error', summary: 'Erro', detail: error.value, life: 5000 });
+    } finally {
+        loading.value = false;
+    }
+}
+
+function abrirExecutar() {
+    Object.assign(form, {
+        monografia_versao_id: '',
+        algoritmo: 'TF-IDF + Similaridade de Cosseno',
+        texto_override: ''
+    });
     showForm.value = true;
 }
 
 async function handleExecutar() {
     if (!form.monografia_versao_id) {
-        toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Selecione uma versão de monografia.' });
+        toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Selecione uma versão de monografia.', life: 4000 });
         return;
     }
-    const resposta = await executar({
-        monografia_versao_id: Number(form.monografia_versao_id),
-        algoritmo: form.algoritmo,
-        texto_override: form.texto_override || undefined,
+
+    saving.value = true;
+    try {
+        const payload = {
+            monografia_versao_id: Number(form.monografia_versao_id),
+            algoritmo: form.algoritmo.trim(),
+            texto_override: form.texto_override?.trim() || undefined
+        };
+
+        const resposta = await executar(payload);
+        if (operacaoBemSucedida(resposta)) {
+            toast.add({ severity: 'success', summary: 'Sucesso', detail: 'Análise executada com sucesso.', life: 4000 });
+            showForm.value = false;
+            await carregarDados();
+        } else {
+            toast.add({ severity: 'error', summary: 'Erro', detail: mensagemErro(resposta, 'Erro ao executar análise.'), life: 5000 });
+        }
+    } catch (err) {
+        toast.add({ severity: 'error', summary: 'Erro', detail: mensagemErro(err?.response ?? err, 'Erro ao executar análise.'), life: 5000 });
+    } finally {
+        saving.value = false;
+    }
+}
+
+function confirmarReanalise(id) {
+    confirm.require({
+        message: 'Deseja solicitar uma nova análise deste registo?',
+        header: 'Confirmar reanálise',
+        icon: 'pi pi-exclamation-triangle',
+        rejectLabel: 'Cancelar',
+        acceptLabel: 'Reanalisar',
+        acceptClass: 'p-button-info',
+        accept: () => executarReanalise(id)
     });
-    if (resposta.success) {
-        toast.add({ severity: 'success', summary: 'Sucesso', detail: 'Análise executada com sucesso.' });
-        showForm.value = false;
-        await listar({ search: '', estado: '' });
-    } else {
-        toast.add({ severity: 'error', summary: 'Erro', detail: resposta.error });
-    }
 }
 
-async function handleReanalisar(id) {
-    if (!window.confirm('Deseja solicitar uma nova análise deste registo?')) return;
-    const resposta = await reanalisar(id);
-    if (resposta.success) {
-        toast.add({ severity: 'info', summary: 'Reanálise', detail: 'Análise redefinida para aguardando.' });
-        await listar({ search: '', estado: '' });
-    } else {
-        toast.add({ severity: 'error', summary: 'Erro', detail: resposta.error });
+async function executarReanalise(id) {
+    try {
+        const resposta = await reanalisar(id);
+        if (operacaoBemSucedida(resposta)) {
+            toast.add({ severity: 'info', summary: 'Reanálise', detail: 'Análise redefinida para aguardando.', life: 4000 });
+            await carregarDados();
+        } else {
+            toast.add({ severity: 'error', summary: 'Erro', detail: mensagemErro(resposta, 'Erro ao reanalisar.'), life: 5000 });
+        }
+    } catch (err) {
+        toast.add({ severity: 'error', summary: 'Erro', detail: mensagemErro(err?.response ?? err, 'Erro ao reanalisar registo.'), life: 5000 });
     }
 }
-
-const podeExecutar = computed(() => role.value === 'ADMIN' || role.value === 'DOCENTE');
-const podeVer = computed(() => role.value === 'ADMIN' || role.value === 'DOCENTE' || role.value === 'ESTUDANTE');
-
 </script>
 
 <template>
+    <Toast />
+    <ConfirmDialog />
+
     <div class="analises-page">
-        <Toast />
+        <!-- Cabeçalho Principal -->
         <div class="page-header">
-            <h1 class="text-2xl font-bold">Análises de Similaridade</h1>
-            <p class="text-sias-text-secondary">Gerir e acompanhar o processo de análise das monografias.</p>
+            <div>
+                <h1>Análises de Similaridade</h1>
+                <p>Gerir e acompanhar o processo de análise de similaridade das monografias.</p>
+            </div>
+            <Button v-if="podeExecutar" label="Executar Análise" icon="pi pi-play" class="btn-primary-custom" @click="abrirExecutar" />
         </div>
 
-        <div class="toolbar">
-            <div class="search-area">
-                <InputText v-model="search.value" placeholder="Pesquisar por título ou estudante" />
-                <Dropdown v-model="estadoFiltro.value" :options="[
-                    { label: 'Todos', value: '' },
+        <!-- Cartões de Estatísticas -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon-wrapper bg-blue-50 text-blue-600">
+                    <i class="pi pi-chart-bar text-xl"></i>
+                </div>
+                <div>
+                    <span class="stat-label">Total de Análises</span>
+                    <h3 class="stat-value">{{ totalAnalises }}</h3>
+                    <span class="stat-trend text-blue-600">Registadas</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon-wrapper bg-emerald-50 text-emerald-600">
+                    <i class="pi pi-check-circle text-xl"></i>
+                </div>
+                <div>
+                    <span class="stat-label">Concluídas</span>
+                    <h3 class="stat-value">{{ concluidasAnalises }}</h3>
+                    <span class="stat-trend text-emerald-600">Processadas com sucesso</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon-wrapper bg-red-50 text-red-600">
+                    <i class="pi pi-exclamation-circle text-xl"></i>
+                </div>
+                <div>
+                    <span class="stat-label">Com Erro</span>
+                    <h3 class="stat-value">{{ erroAnalises }}</h3>
+                    <span class="stat-trend text-red-600">Requer atenção</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barra de Ferramentas e Filtros -->
+        <div class="toolbar-card">
+            <div class="search-wrapper">
+                <InputText v-model="search" placeholder="Pesquisar por título, estudante ou algoritmo..." class="search-input" />
+            </div>
+            
+            <div class="filters-group">
+                <Dropdown v-model="estadoFiltro" :options="[
+                    { label: 'Todos os Estados', value: '' },
                     { label: 'Aguardando', value: 'AGUARDANDO' },
                     { label: 'Processando', value: 'PROCESSANDO' },
                     { label: 'Concluída', value: 'CONCLUIDA' },
-                    { label: 'Erro', value: 'ERRO' },
-                ]" placeholder="Estado" />
-            </div>
-            <div class="actions">
-                <Button v-if="podeExecutar" label="Executar Análise" icon="pi pi-play" outlined @click="abrirExecutar" />
+                    { label: 'Erro', value: 'ERRO' }
+                ]" optionLabel="label" optionValue="value" placeholder="Filtrar por Estado" class="w-48" />
+
+                <Button icon="pi pi-refresh" severity="secondary" outlined :loading="loading" @click="carregarDados" v-tooltip.top="'Atualizar lista'" />
             </div>
         </div>
 
-        <Card class="mt-4">
-            <DataTable :value="analisesFiltradas" :paginator="true" :rows="10" dataKey="id" :loading="loading">
-                <template #header>
-                    <span>Análises ({{ items.value.length }})</span>
+        <!-- Tabela de Análises -->
+        <DataTable :value="analisesFiltradas" :loading="loading" dataKey="id" paginator :rows="10"
+            :rowsPerPageOptions="[5, 10, 20, 50]" stripedRows responsiveLayout="scroll"
+            class="p-datatable-custom shadow-sm border rounded-xl overflow-hidden"
+            emptyMessage="Nenhuma análise encontrada.">
+            
+            <Column field="monografia_titulo" header="Monografia" sortable style="min-width: 15rem;">
+                <template #body="{ data }">
+                    <strong>{{ data.monografia_titulo || '—' }}</strong>
                 </template>
-                <Column field="monografia_titulo" header="Monografia" sortable />
-                <Column field="estudante_nome" header="Estudante" sortable />
-                <Column field="numero_versao" header="Versão" sortable />
-                <Column field="algoritmo" header="Algoritmo" />
-                <Column field="estado" header="Estado" sortable>
-                    <template #body="slotProps">
-                        <span class="estado-badge" :class="`estado-${slotProps.data.estado}`">
-                            {{ slotProps.data.estado }}
-                        </span>
-                    </template>
-                </Column>
-                <Column field="similaridade_geral" header="Similaridade (%)" sortable />
-                <Column field="classificacao" header="Classificação" />
-                <Column field="data_conclusao" header="Concluída em" />
-                <Column field="acoes" header="Ações" style="width: 220px; text-align: center">
-                    <template #body="slotProps">
-                        <div class="flex justify-content-center gap-2">
-                            <Button icon="pi pi-eye" outlined rounded @click="obter(slotProps.data.id)" />
-                            <Button v-if="podeExecutar && slotProps.data.estado === 'ERRO'" icon="pi pi-redo" outlined @click="handleReanalisar(slotProps.data.id)" />
-                        </div>
-                    </template>
-                </Column>
-            </DataTable>
-        </Card>
+            </Column>
 
-        <Dialog v-model:visible="showForm" header="Executar Nova Análise" :modal="true" style="width: 550px">
-            <div class="flex flex-col gap-3">
-                <Dropdown v-model="form.monografia_versao_id" label="Versão da Monografia" :options="monografiasItems.map(m => ({ label: m.titulo, value: m.id }))" placeholder="Selecionar versão" />
-                <InputText v-model="form.algoritmo" label="Algoritmo" placeholder="TF-IDF + Similaridade de Cosseno" />
-                <Textarea v-model="form.texto_override" label="Texto para análise (opcional)" :rows="3" placeholder="Deixe vazio para usar o texto extraído do ficheiro" />
-            </div>
-            <template #footer>
-                <Button label="Cancelar" outlined @click="showForm = false" />
-                <Button label="Executar" icon="pi pi-play" @click="handleExecutar" />
-            </template>
+            <Column field="estudante_nome" header="Estudante" sortable style="min-width: 12rem;">
+                <template #body="{ data }">
+                    <span>{{ data.estudante_nome || '—' }}</span>
+                </template>
+            </Column>
+
+            <Column field="numero_versao" header="Versão" sortable style="width: 7rem;">
+                <template #body="{ data }">
+                    <Tag severity="info" :value="`v${data.numero_versao || 1}`" rounded />
+                </template>
+            </Column>
+
+            <Column field="algoritmo" header="Algoritmo" style="min-width: 13rem;" />
+
+            <Column field="estado" header="Estado" style="width: 10rem;">
+                <template #body="{ data }">
+                    <Tag :value="rotuloEstado(data.estado)" :severity="severityEstado(data.estado)" />
+                </template>
+            </Column>
+
+            <Column field="similaridade_geral" header="Similaridade (%)" sortable style="min-width: 10rem;">
+                <template #body="{ data }">
+                    <span :class="Number(data.similaridade_geral) > 30 ? 'text-red-600 font-bold' : 'text-emerald-600 font-bold'">
+                        {{ data.similaridade_geral !== undefined && data.similaridade_geral !== null ? `${data.similaridade_geral}%` : '—' }}
+                    </span>
+                </template>
+            </Column>
+
+            <Column field="classificacao" header="Classificação" style="min-width: 10rem;">
+                <template #body="{ data }">
+                    <span>{{ data.classificacao || '—' }}</span>
+                </template>
+            </Column>
+
+            <Column field="data_conclusao" header="Concluída em" sortable style="min-width: 11rem;">
+                <template #body="{ data }">
+                    <span>{{ formatarData(data.data_conclusao) }}</span>
+                </template>
+            </Column>
+
+            <Column header="Ações" style="width: 8rem; text-align: center;">
+                <template #body="{ data }">
+                    <div class="action-buttons">
+                        <Button icon="pi pi-eye" severity="info" text rounded aria-label="Ver Detalhes"
+                            v-tooltip.top="'Ver detalhes da análise'" @click="obter(data.id)" />
+                        <Button v-if="podeExecutar && data.estado === 'ERRO'" icon="pi pi-redo" severity="warning" text rounded aria-label="Reanalisar"
+                            v-tooltip.top="'Solicitar nova análise'" @click="confirmarReanalise(data.id)" />
+                    </div>
+                </template>
+            </Column>
+        </DataTable>
+
+        <!-- Diálogo para Executar Nova Análise -->
+        <Dialog v-model:visible="showForm" header="Executar Nova Análise" modal
+            :style="{ width: 'min(95vw, 560px)' }" :closable="!saving">
+            <form class="analise-form" @submit.prevent="handleExecutar">
+                
+                <div class="field">
+                    <label for="monografia_versao_id">Versão da Monografia *</label>
+                    <Dropdown id="monografia_versao_id" v-model="form.monografia_versao_id" 
+                        :options="monografiasItems.map(m => ({ label: `${m.titulo} (v${m.numero_versao || 1})`, value: m.id }))" 
+                        optionLabel="label" optionValue="value" placeholder="Selecione a versão da monografia" class="w-full" filter />
+                </div>
+
+                <div class="field">
+                    <label for="algoritmo">Algoritmo de Análise *</label>
+                    <InputText id="algoritmo" v-model="form.algoritmo" class="w-full form-input"
+                        placeholder="Ex: TF-IDF + Similaridade de Cosseno" />
+                </div>
+
+                <div class="field">
+                    <label for="texto_override">Texto para Análise (Opcional)</label>
+                    <Textarea id="texto_override" v-model="form.texto_override" rows="3" class="w-full"
+                        placeholder="Deixe vazio para usar automaticamente o texto extraído do ficheiro original" />
+                </div>
+
+                <div class="form-actions">
+                    <Button type="button" label="Cancelar" severity="secondary" outlined :disabled="saving"
+                        @click="showForm = false" />
+                    <Button type="submit" label="Executar Análise" icon="pi pi-play"
+                        :loading="saving" class="btn-primary-custom" />
+                </div>
+            </form>
         </Dialog>
 
-        <div v-if="error" class="p-3 text-red-500 bg-red-50 rounded mt-4">Erro: {{ error }}</div>
+        <div v-if="error" class="p-3 text-red-500 bg-red-50 rounded mt-4 border border-red-200">Erro: {{ error }}</div>
     </div>
 </template>
 
 <style scoped>
+.analises-page {
+    padding: 1.5rem;
+    background-color: #f8fafc;
+    min-height: 100vh;
+}
+
 .page-header {
     display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
     margin-bottom: 1.5rem;
 }
-.toolbar {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    flex-wrap: wrap;
-    margin-bottom: 1rem;
+
+.page-header h1 {
+    margin: 0 0 0.25rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
 }
-.search-area {
+
+.page-header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.btn-primary-custom {
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+}
+.btn-primary-custom:hover {
+    background-color: #1d4ed8 !important;
+    border-color: #1d4ed8 !important;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: #ffffff;
+    padding: 1.25rem;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
     display: flex;
-    gap: 0.5rem;
     align-items: center;
+    gap: 1rem;
+}
+
+.stat-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 500;
+    display: block;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0.15rem 0;
+}
+
+.stat-trend {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.toolbar-card {
+    background: #ffffff;
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.search-wrapper {
     flex: 1;
     min-width: 260px;
 }
-.actions {
+
+.search-input {
+    width: 100%;
+}
+
+.filters-group {
     display: flex;
-    gap: 0.5rem;
+    align-items: center;
+    gap: 0.75rem;
 }
-.estado-badge {
-    display: inline-block;
-    padding: 0.2rem 0.6rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
+
+:deep(.p-datatable-custom .p-datatable-thead > tr > th) {
+    padding-top: 1.2rem !important;
+    padding-bottom: 1.2rem !important;
+    font-size: 0.95rem;
     font-weight: 600;
-    text-transform: uppercase;
-    background: var(--sias-blue-slate);
-    color: var(--sias-text-primary);
+    background-color: #f1f5f9 !important;
+    color: #334155 !important;
+    min-height: 55px;
 }
-.estado-aguardando { background: var(--sias-foggy-blue); color: var(--sias-text-primary); }
-.estado-processando { background: var(--sias-cloud-blue); color: var(--sias-text-primary); }
-.estado-concluida { background: var(--sias-dusk-blue); color: var(--sias-text-primary); }
-.estado-erro { background: #f8d7da; color: #721c24; }
+
+:deep(.p-datatable-custom .p-datatable-tbody > tr > td) {
+    padding: 1.15rem 1.25rem !important;
+}
+
+.action-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.analise-form {
+    display: grid;
+    gap: 1.1rem;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.field label {
+    font-weight: 500;
+    color: #334155;
+    font-size: 0.9rem;
+}
+
+.form-input {
+    height: 48px;
+}
+
+.w-full {
+    width: 100%;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 1rem;
+}
+
+@media (max-width: 768px) {
+    .toolbar-card, .page-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
 </style>

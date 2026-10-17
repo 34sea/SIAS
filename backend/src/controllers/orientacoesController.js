@@ -7,64 +7,98 @@ const pool = require('../config/db');
  *     description: Associação entre estudantes e orientadores
  */
 
-/**
- * @swagger
- * /api/orientacoes:
- *   get:
- *     summary: Listar orientações
- *     tags: [Orientacoes]
- *     security: - bearerAuth: []
- *   post:
- *     summary: Criar orientação
- *     tags: [Orientacoes]
- *     security: - bearerAuth: []
- */
+
 const getOrientacoes = async (req, res, next) => {
     try {
         const { estudante_id, docente_id, estado } = req.query;
+
         let sql = `
-            SELECT o.id, o.estudante_id, o.docente_id,
-                   ue.nome_completo AS estudante_nome,
-                   ud.nome_completo AS docente_nome,
-                   o.data_inicio, o.data_fim, o.estado, o.observacoes, o.criado_em
+            SELECT
+                o.id,
+                o.estudante_id,
+                o.docente_id,
+
+                -- Dados do estudante
+                ue.nome_completo AS estudante_nome,
+                ue.email AS estudante_email,
+                ue.foto AS estudante_foto,
+
+                -- Dados do curso do estudante
+                c.id AS curso_id,
+                c.nome AS curso_nome,
+
+                -- Dados do docente
+                ud.nome_completo AS docente_nome,
+                ud.email AS docente_email,
+                ud.foto AS docente_foto,
+
+                -- Dados da orientação
+                o.data_inicio,
+                o.data_fim,
+                o.estado,
+                o.observacoes,
+                o.criado_em
+
             FROM orientacoes o
-            INNER JOIN estudantes e ON e.id = o.estudante_id
-            INNER JOIN utilizadores ue ON ue.id = e.utilizador_id
-            INNER JOIN docentes d ON d.id = o.docente_id
-            INNER JOIN utilizadores ud ON ud.id = d.utilizador_id
+
+            INNER JOIN estudantes e
+                ON e.id = o.estudante_id
+
+            INNER JOIN utilizadores ue
+                ON ue.id = e.utilizador_id
+
+            INNER JOIN cursos c
+                ON c.id = e.curso_id
+
+            INNER JOIN docentes d
+                ON d.id = o.docente_id
+
+            INNER JOIN utilizadores ud
+                ON ud.id = d.utilizador_id
+
             WHERE 1=1
         `;
+
         const params = [];
-        if (estudante_id) { sql += ` AND o.estudante_id = ?`; params.push(estudante_id); }
-        if (docente_id) { sql += ` AND o.docente_id = ?`; params.push(docente_id); }
-        if (estado) { sql += ` AND o.estado = ?`; params.push(estado); }
+
+        if (estudante_id) {
+            sql += ` AND o.estudante_id = ?`;
+            params.push(estudante_id);
+        }
+
+        if (docente_id) {
+            sql += ` AND o.docente_id = ?`;
+            params.push(docente_id);
+        }
+
+        if (estado) {
+            sql += ` AND o.estado = ?`;
+            params.push(estado);
+        }
+
         sql += ` ORDER BY o.criado_em DESC`;
+
         const [orientacoes] = await pool.query(sql, params);
-        return res.status(200).json({ success: true, total: orientacoes.length, data: orientacoes });
-    } catch (error) { next(error); }
+
+        return res.status(200).json({
+            success: true,
+            total: orientacoes.length,
+            data: orientacoes
+        });
+
+    } catch (error) {
+        next(error);
+    }
 };
 
-/**
- * @swagger
- * /api/orientacoes/{id}:
- *   get:
- *     summary: Obter orientação por ID
- *     tags: [Orientacoes]
- *     security: - bearerAuth: []
- *   put:
- *     summary: Actualizar orientação
- *     tags: [Orientacoes]
- *     security: - bearerAuth: []
- *   delete:
- *     summary: Eliminar orientação
- *     tags: [Orientacoes]
- *     security: - bearerAuth: []
- */
+
 const getOrientacaoById = async (req, res, next) => {
     try {
         const { id } = req.params;
         const [rows] = await pool.query(
-            `SELECT o.*, ue.nome_completo AS estudante_nome, ud.nome_completo AS docente_nome
+            `SELECT o.*, 
+                    ue.nome_completo AS estudante_nome, ue.email AS estudante_email, ue.foto AS estudante_foto, 
+                    ud.nome_completo AS docente_nome, ud.email AS docente_email, ud.foto AS docente_foto
              FROM orientacoes o
              INNER JOIN estudantes e ON e.id = o.estudante_id
              INNER JOIN utilizadores ue ON ue.id = e.utilizador_id
@@ -100,7 +134,9 @@ const createOrientacao = async (req, res, next) => {
             [estudante_id, docente_id, data_inicio || null, data_fim || null, estado || 'ATIVA', observacoes || null]
         );
         const [orientacao] = await pool.query(
-            `SELECT o.*, ue.nome_completo AS estudante_nome, ud.nome_completo AS docente_nome
+            `SELECT o.*, 
+                    ue.nome_completo AS estudante_nome, ue.email AS estudante_email, ue.foto AS estudante_foto, 
+                    ud.nome_completo AS docente_nome, ud.email AS docente_email, ud.foto AS docente_foto
              FROM orientacoes o
              INNER JOIN estudantes e ON e.id = o.estudante_id
              INNER JOIN utilizadores ue ON ue.id = e.utilizador_id
@@ -132,7 +168,18 @@ const updateOrientacao = async (req, res, next) => {
         }
         valores.push(id);
         await pool.query(`UPDATE orientacoes SET ${campos.join(', ')} WHERE id = ?`, valores);
-        const [orientacao] = await pool.query(`SELECT * FROM orientacoes WHERE id = ?`, [id]);
+        const [orientacao] = await pool.query(
+            `SELECT o.*, 
+                    ue.nome_completo AS estudante_nome, ue.email AS estudante_email, ue.foto AS estudante_foto, 
+                    ud.nome_completo AS docente_nome, ud.email AS docente_email, ud.foto AS docente_foto
+             FROM orientacoes o
+             INNER JOIN estudantes e ON e.id = o.estudante_id
+             INNER JOIN utilizadores ue ON ue.id = e.utilizador_id
+             INNER JOIN docentes d ON d.id = o.docente_id
+             INNER JOIN utilizadores ud ON ud.id = d.utilizador_id
+             WHERE o.id = ?`,
+            [id]
+        );
         return res.status(200).json({ success: true, message: 'Orientação actualizada com sucesso.', data: orientacao[0] });
     } catch (error) { next(error); }
 };
@@ -149,4 +196,23 @@ const deleteOrientacao = async (req, res, next) => {
     } catch (error) { next(error); }
 };
 
-module.exports = { getOrientacoes, getOrientacaoById, createOrientacao, updateOrientacao, deleteOrientacao };
+const getOrientacoesByEstudante = async (req, res, next) => {
+    try {
+        const { estudante_id } = req.params;
+        const [orientacoes] = await pool.query(
+            `SELECT o.*, 
+                    ue.nome_completo AS estudante_nome, ue.email AS estudante_email, ue.foto AS estudante_foto, 
+                    ud.nome_completo AS docente_nome, ud.email AS docente_email, ud.foto AS docente_foto
+             FROM orientacoes o
+             INNER JOIN estudantes e ON e.id = o.estudante_id
+             INNER JOIN utilizadores ue ON ue.id = e.utilizador_id
+             INNER JOIN docentes d ON d.id = o.docente_id
+             INNER JOIN utilizadores ud ON ud.id = d.utilizador_id
+             WHERE o.estudante_id = ?`,
+            [estudante_id]
+        );
+        return res.status(200).json({ success: true, total: orientacoes.length, data: orientacoes });
+    } catch (error) { next(error); }
+};
+
+module.exports = { getOrientacoes, getOrientacaoById, createOrientacao, updateOrientacao, deleteOrientacao, getOrientacoesByEstudante };

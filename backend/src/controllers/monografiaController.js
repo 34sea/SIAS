@@ -1,4 +1,3 @@
-
 const pool = require('../config/db');
 const fs = require('fs/promises');
 const path = require('path');
@@ -20,13 +19,10 @@ const crypto = require('crypto');
  *       properties:
  *         id:
  *           type: integer
- *           example: 1
  *         estudante_id:
  *           type: integer
- *           example: 1
  *         estudante_nome:
  *           type: string
- *           example: "Martinho Domingos"
  *         orientador_id:
  *           type: integer
  *           nullable: true
@@ -35,10 +31,8 @@ const crypto = require('crypto');
  *           nullable: true
  *         titulo:
  *           type: string
- *           example: "Sistema Inteligente de Análise de Similaridade"
  *         ano:
  *           type: integer
- *           example: 2026
  *         descricao:
  *           type: string
  *           nullable: true
@@ -146,7 +140,10 @@ const removerFicheiro = async (ficheiro) => {
         await fs.unlink(ficheiro);
     } catch (error) {
         if (error.code !== 'ENOENT') {
-            console.error('Erro ao remover ficheiro:', error.message);
+            console.error(
+                'Erro ao remover ficheiro:',
+                error.message
+            );
         }
     }
 };
@@ -231,48 +228,7 @@ const obterVersao = async (monografiaId, versaoId) => {
 };
 
 /**
- * @swagger
- * /api/moonograph:
- *   get:
- *     summary: Listar monografias
- *     description: Lista monografias com filtros opcionais.
- *     tags: [Monografias]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *         description: Pesquisa por título ou nome do estudante.
- *       - in: query
- *         name: estado
- *         schema:
- *           type: string
- *         description: Estado da monografia.
- *       - in: query
- *         name: estudante_id
- *         schema:
- *           type: integer
- *       - in: query
- *         name: orientador_id
- *         schema:
- *           type: integer
- *       - in: query
- *         name: curso_id
- *         schema:
- *           type: integer
- *       - in: query
- *         name: ano
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Monografias listadas com sucesso.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/MonografiasResponse'
+ * Lista monografias com filtros opcionais.
  */
 const getMonografias = async (req, res, next) => {
     try {
@@ -415,26 +371,7 @@ const getMonografias = async (req, res, next) => {
 };
 
 /**
- * @swagger
- * /api/moonograph/{id}:
- *   get:
- *     summary: Consultar monografia
- *     tags: [Monografias]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Monografia encontrada.
- *       400:
- *         description: ID inválido.
- *       404:
- *         description: Monografia não encontrada.
+ * Consulta uma monografia pelo ID, incluindo as versões.
  */
 const getMonografiaById = async (req, res, next) => {
     try {
@@ -488,47 +425,8 @@ const getMonografiaById = async (req, res, next) => {
         next(error);
     }
 };
-
 /**
- * @swagger
- * /api/moonograph:
- *   post:
- *     summary: Submeter uma nova monografia
- *     description: Cria a monografia e a primeira versão numa transação.
- *     tags: [Monografias]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             required:
- *               - titulo
- *               - ano
- *               - ficheiro
- *             properties:
- *               titulo:
- *                 type: string
- *               ano:
- *                 type: integer
- *               descricao:
- *                 type: string
- *               estudante_id:
- *                 type: integer
- *                 description: ID do estudante associado à monografia.
- *               orientador_id:
- *                 type: integer
- *                 nullable: true
- *               ficheiro:
- *                 type: string
- *                 format: binary
- *     responses:
- *       201:
- *         description: Monografia submetida com sucesso.
- *       400:
- *         description: Dados inválidos ou ficheiro em falta.
+ * Submete uma nova monografia e cria a primeira versão numa transacção.
  */
 const createMonografia = async (req, res, next) => {
     let connection;
@@ -612,7 +510,7 @@ const createMonografia = async (req, res, next) => {
         const [estudantes] = await connection.query(
             `
             SELECT id
-            FROM utilizadores
+            FROM estudantes
             WHERE id = ?
             LIMIT 1
             `,
@@ -633,7 +531,7 @@ const createMonografia = async (req, res, next) => {
             const [orientadores] = await connection.query(
                 `
                 SELECT id
-                FROM utilizadores
+                FROM docentes
                 WHERE id = ?
                 LIMIT 1
                 `,
@@ -702,7 +600,7 @@ const createMonografia = async (req, res, next) => {
                 req.file.mimetype,
                 req.file.size,
                 hash,
-                Number(req.user?.id) || estudanteId
+                estudanteId
             ]
         );
 
@@ -760,44 +658,7 @@ const createMonografia = async (req, res, next) => {
 };
 
 /**
- * @swagger
- * /api/moonograph/{id}:
- *   put:
- *     summary: Atualizar metadados da monografia
- *     description: Atualiza os metadados sem substituir o documento submetido.
- *     tags: [Monografias]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               titulo:
- *                 type: string
- *               ano:
- *                 type: integer
- *               descricao:
- *                 type: string
- *                 nullable: true
- *               orientador_id:
- *                 type: integer
- *                 nullable: true
- *     responses:
- *       200:
- *         description: Monografia atualizada.
- *       400:
- *         description: Dados inválidos.
- *       404:
- *         description: Monografia não encontrada.
+ * Actualiza os metadados da monografia sem substituir o documento.
  */
 const updateMonografia = async (req, res, next) => {
     try {
@@ -938,28 +799,8 @@ const updateMonografia = async (req, res, next) => {
         next(error);
     }
 };
-
 /**
- * @swagger
- * /api/moonograph/{id}/versoes:
- *   get:
- *     summary: Listar versões de uma monografia
- *     tags: [Monografias]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Histórico de versões obtido.
- *       400:
- *         description: ID inválido.
- *       404:
- *         description: Monografia não encontrada.
+ * Lista todas as versões de uma monografia.
  */
 const getMonografiaVersoes = async (req, res, next) => {
     try {
@@ -1014,31 +855,7 @@ const getMonografiaVersoes = async (req, res, next) => {
 };
 
 /**
- * @swagger
- * /api/moonograph/{id}/versoes/{versaoId}:
- *   get:
- *     summary: Consultar uma versão específica
- *     tags: [Monografias]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *       - in: path
- *         name: versaoId
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Versão encontrada.
- *       400:
- *         description: IDs inválidos.
- *       404:
- *         description: Versão não encontrada.
+ * Consulta uma versão específica de uma monografia.
  */
 const getMonografiaVersaoById = async (req, res, next) => {
     try {
@@ -1081,43 +898,8 @@ const getMonografiaVersaoById = async (req, res, next) => {
         next(error);
     }
 };
-
 /**
- * @swagger
- * /api/moonograph/{id}/versoes:
- *   post:
- *     summary: Submeter nova versão de uma monografia
- *     description: Cria uma nova versão e preserva o histórico anterior.
- *     tags: [Monografias]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             required: [ficheiro]
- *             properties:
- *               ficheiro:
- *                 type: string
- *                 format: binary
- *               submetido_por:
- *                 type: integer
- *                 description: ID do utilizador que submete a versão.
- *     responses:
- *       201:
- *         description: Nova versão submetida.
- *       400:
- *         description: Ficheiro inválido ou monografia arquivada.
- *       404:
- *         description: Monografia não encontrada.
+ * Submete uma nova versão e preserva o histórico anterior.
  */
 const createMonografiaVersao = async (req, res, next) => {
     let connection;
@@ -1141,9 +923,8 @@ const createMonografiaVersao = async (req, res, next) => {
             });
         }
 
-        const submetidoPor = Number(
-            req.user?.id ?? req.body.submetido_por
-        );
+        // O ID do utilizador é recebido no corpo do pedido.
+        const submetidoPor = Number(req.body.submetido_por);
 
         if (!Number.isInteger(submetidoPor) || submetidoPor <= 0) {
             return res.status(400).json({
@@ -1286,29 +1067,8 @@ const createMonografiaVersao = async (req, res, next) => {
         }
     }
 };
-
 /**
- * @swagger
- * /api/moonograph/{id}:
- *   delete:
- *     summary: Arquivar monografia
- *     description: Arquiva a monografia sem apagar o histórico de versões.
- *     tags: [Monografias]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Monografia arquivada.
- *       400:
- *         description: ID inválido ou monografia já arquivada.
- *       404:
- *         description: Monografia não encontrada.
+ * Arquiva a monografia sem apagar o histórico de versões.
  */
 const deleteMonografia = async (req, res, next) => {
     try {

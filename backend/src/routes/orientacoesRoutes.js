@@ -17,15 +17,15 @@ router.use(authMiddleware);
 
 router.get(
     '/',
-    roleMiddleware('ADMIN'),
-    permissionMiddleware('ORIENTADORES_GERIR'),
+    // roleMiddleware('ADMIN'),
+    // permissionMiddleware('ORIENTADORES_GERIR'),
     getOrientacoes
 );
 
 router.get(
     '/:id',
-    roleMiddleware('ADMIN'),
-    permissionMiddleware('ORIENTADORES_GERIR'),
+    // roleMiddleware('ADMIN'),
+    // permissionMiddleware('ORIENTADORES_GERIR'),
     getOrientacaoById
 );
 

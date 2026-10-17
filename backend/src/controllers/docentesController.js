@@ -39,7 +39,7 @@ const getDocentes = async (req, res, next) => {
     try {
         const { search = '', ativo } = req.query;
         let sql = `
-            SELECT d.id, d.utilizador_id, u.nome_completo, u.email, u.username,
+            SELECT d.id, d.utilizador_id, u.nome_completo, u.email, u.username, u.foto,
                    d.departamento, d.especialidade, d.grau_academico,
                    d.numero_funcionario, d.ativo, d.criado_em
             FROM docentes d
@@ -48,13 +48,13 @@ const getDocentes = async (req, res, next) => {
         `;
         const params = [];
         if (search.trim() !== '') {
-            sql += ` AND (u.nome_completo LIKE ? OR u.email LIKE ? OR d.especialidade LIKE ?)`;
+            sql += ` AND (u.nome_completo LIKE ? OR u.email LIKE ? OR d.especialidade LIKE ? OR d.departamento LIKE ?)`;
             const v = `%${search.trim()}%`;
-            params.push(v, v, v);
+            params.push(v, v, v, v);
         }
-        if (ativo !== undefined) {
+        if (ativo !== undefined && ativo !== '') {
             sql += ` AND d.ativo = ?`;
-            params.push(ativo === '1' || ativo === true ? 1 : 0);
+            params.push(ativo === '1' || ativo === 'true' || ativo === true ? 1 : 0);
         }
         sql += ` ORDER BY u.nome_completo ASC`;
         const [docentes] = await pool.query(sql, params);
@@ -82,8 +82,9 @@ const getDocenteById = async (req, res, next) => {
     try {
         const { id } = req.params;
         const [rows] = await pool.query(
-            `SELECT d.*, u.nome_completo, u.email, u.username
-             FROM docentes d INNER JOIN utilizadores u ON u.id = d.utilizador_id
+            `SELECT d.*, u.nome_completo, u.email, u.username, u.foto
+             FROM docentes d 
+             INNER JOIN utilizadores u ON u.id = d.utilizador_id
              WHERE d.id = ? LIMIT 1`,
             [id]
         );
@@ -108,14 +109,16 @@ const createDocente = async (req, res, next) => {
         if (docenteExistente.length > 0) {
             return res.status(409).json({ success: false, message: 'Este utilizador já é docente.' });
         }
+
+        const statusAtivo = ativo !== undefined ? (ativo === 1 || ativo === '1' || ativo === true || ativo === 'true' ? 1 : 0) : 1;
+
         const [resultado] = await pool.query(
             `INSERT INTO docentes (utilizador_id, departamento, especialidade, grau_academico, numero_funcionario, ativo)
              VALUES (?, ?, ?, ?, ?, ?)`,
-            [utilizador_id, departamento || null, especialidade || null, grau_academico || null, numero_funcionario || null,
-             ativo !== undefined ? (ativo === '1' || ativo === true ? 1 : 0) : 1]
+            [utilizador_id, departamento || null, especialidade || null, grau_academico || null, numero_funcionario || null, statusAtivo]
         );
         const [docente] = await pool.query(
-            `SELECT d.*, u.nome_completo, u.email, u.username FROM docentes d INNER JOIN utilizadores u ON u.id = d.utilizador_id WHERE d.id = ?`,
+            `SELECT d.*, u.nome_completo, u.email, u.username, u.foto FROM docentes d INNER JOIN utilizadores u ON u.id = d.utilizador_id WHERE d.id = ?`,
             [resultado.insertId]
         );
         return res.status(201).json({ success: true, message: 'Docente registado com sucesso.', data: docente[0] });
@@ -136,14 +139,17 @@ const updateDocente = async (req, res, next) => {
         if (especialidade !== undefined) { campos.push('especialidade = ?'); valores.push(especialidade); }
         if (grau_academico !== undefined) { campos.push('grau_academico = ?'); valores.push(grau_academico); }
         if (numero_funcionario !== undefined) { campos.push('numero_funcionario = ?'); valores.push(numero_funcionario); }
-        if (ativo !== undefined) { campos.push('ativo = ?'); valores.push(ativo === '1' || ativo === true ? 1 : 0); }
+        if (ativo !== undefined) { 
+            campos.push('ativo = ?'); 
+            valores.push(ativo === 1 || ativo === '1' || ativo === true || ativo === 'true' ? 1 : 0); 
+        }
         if (campos.length === 0) {
             return res.status(400).json({ success: false, message: 'Nenhum campo enviado para actualização.' });
         }
         valores.push(id);
         await pool.query(`UPDATE docentes SET ${campos.join(', ')} WHERE id = ?`, valores);
         const [docente] = await pool.query(
-            `SELECT d.*, u.nome_completo FROM docentes d INNER JOIN utilizadores u ON u.id = d.utilizador_id WHERE d.id = ?`,
+            `SELECT d.*, u.nome_completo, u.email, u.username, u.foto FROM docentes d INNER JOIN utilizadores u ON u.id = d.utilizador_id WHERE d.id = ?`,
             [id]
         );
         return res.status(200).json({ success: true, message: 'Docente actualizado com sucesso.', data: docente[0] });

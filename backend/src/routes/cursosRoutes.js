@@ -17,15 +17,15 @@ router.use(authMiddleware);
 
 router.get(
     '/',
-    roleMiddleware('ADMIN'),
-    permissionMiddleware('CURSOS_GERIR'),
+    // roleMiddleware('ADMIN'),
+    // permissionMiddleware('CURSOS_GERIR'),
     getCursos
 );
 
 router.get(
     '/:id',
-    roleMiddleware('ADMIN'),
-    permissionMiddleware('CURSOS_GERIR'),
+    // roleMiddleware('ADMIN'),
+    // permissionMiddleware('CURSOS_GERIR'),
     getCursoById
 );
 
