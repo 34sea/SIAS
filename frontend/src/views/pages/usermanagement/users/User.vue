@@ -1,4 +1,3 @@
-
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { usersApi } from '@/api/users';
@@ -19,7 +18,7 @@ import Checkbox from 'primevue/checkbox';
 import FileUpload from 'primevue/fileupload';
 import Toast from 'primevue/toast';
 import ConfirmDialog from 'primevue/confirmdialog';
-
+const API_URL = 'http://localhost:5000/';
 const toast = useToast();
 const confirm = useConfirm();
 
@@ -374,6 +373,8 @@ async function alterarEstado(user) {
         user.ativo === 1 ||
         user.ativo === '1';
 
+        console.log(`estadoActual: ${estadoActual}`)
+
     const novoEstado = !estadoActual;
 
     try {
@@ -473,52 +474,26 @@ onMounted(async () => {
                 <p>Consulte e administre os utilizadores do sistema.</p>
             </div>
 
-            <Button
-                label="Novo utilizador"
-                icon="pi pi-plus"
-                @click="abrirCriacao"
-            />
+            <Button label="Novo utilizador" icon="pi pi-plus" @click="abrirCriacao" />
         </div>
 
         <div class="toolbar">
-            <InputText
-                v-model="search"
-                placeholder="Pesquisar por nome, email ou perfil..."
-                class="search-input"
-            />
+            <InputText v-model="search" placeholder="Pesquisar por nome, email ou perfil..." class="search-input" />
 
-            <Button
-                icon="pi pi-refresh"
-                label="Actualizar"
-                severity="secondary"
-                outlined
-                :loading="loading"
-                @click="carregar"
-            />
+            <Button icon="pi pi-refresh" label="Actualizar" severity="secondary" outlined :loading="loading"
+                @click="carregar" />
         </div>
 
-        <DataTable
-            :value="utilizadoresFiltrados"
-            :loading="loading"
-            dataKey="id"
-            paginator
-            :rows="10"
-            :rowsPerPageOptions="[5, 10, 20, 50]"
-            stripedRows
-            responsiveLayout="scroll"
-            emptyMessage="Nenhum utilizador encontrado."
-        >
+        <DataTable :value="utilizadoresFiltrados" :loading="loading" dataKey="id" paginator :rows="10"
+            :rowsPerPageOptions="[5, 10, 20, 50]" stripedRows responsiveLayout="scroll"
+            emptyMessage="Nenhum utilizador encontrado.">
             <Column field="id" header="ID" sortable />
 
             <Column header="Utilizador" sortable sortField="nome_completo">
                 <template #body="{ data }">
                     <div class="user-cell">
-                        <img
-                            v-if="data.foto_url || data.foto"
-                            :src="data.foto_url || data.foto"
-                            alt="Fotografia"
-                            class="user-avatar"
-                        />
+                        <img v-if="data.foto_url || data.foto" :src="`${API_URL}${data.foto_url || data.foto}`"
+                            alt="Fotografia" class="user-avatar" />
 
                         <div v-else class="user-avatar avatar-placeholder">
                             <i class="pi pi-user" />
@@ -566,93 +541,50 @@ onMounted(async () => {
                 </template>
             </Column> -->
 
-            <Column header="Acções" style="min-width: 12rem">
+            <!-- <Column header="Acções" style="min-width: 12rem">
                 <template #body="{ data }">
+                    {{ console.log(data.estado) }}
                     <div class="action-buttons">
-                        <Button
-                            icon="pi pi-pencil"
-                            severity="info"
-                            text
-                            rounded
-                            aria-label="Editar"
-                            v-tooltip.top="'Editar utilizador'"
-                            @click="abrirEdicao(data)"
-                        />
+                        <Button icon="pi pi-pencil" severity="info" text rounded aria-label="Editar"
+                            v-tooltip.top="'Editar utilizador'" @click="abrirEdicao(data)" />
 
-                        <Button
-                            :icon="
-                                data.ativo === true ||
+                        <Button :icon="data.ativo === true ||
                                 data.ativo === 1 ||
                                 data.ativo === '1'
-                                    ? 'pi pi-lock'
-                                    : 'pi pi-lock-open'
-                            "
-                            :severity="
-                                data.ativo === true ||
-                                data.ativo === 1 ||
-                                data.ativo === '1'
+                                ? 'pi pi-lock'
+                                : 'pi pi-lock-open'
+                            " :severity="data.ativo === true ||
+                                    data.ativo === 1 ||
+                                    data.ativo === '1'
                                     ? 'warn'
                                     : 'success'
-                            "
-                            text
-                            rounded
-                            aria-label="Alterar estado"
-                            @click="alterarEstado(data)"
-                        />
+                                " text rounded aria-label="Alterar estado" @click="alterarEstado(data)" />
 
-                        <Button
-                            icon="pi pi-trash"
-                            severity="danger"
-                            text
-                            rounded
-                            aria-label="Remover"
-                            @click="confirmarRemocao(data)"
-                        />
+                        <Button icon="pi pi-trash" severity="danger" text rounded aria-label="Remover"
+                            @click="confirmarRemocao(data)" />
                     </div>
                 </template>
-            </Column>
+            </Column> -->
         </DataTable>
 
-        <Dialog
-            v-model:visible="showForm"
-            :header="modoEdicao ? 'Editar utilizador' : 'Novo utilizador'"
-            modal
-            :style="{ width: 'min(95vw, 620px)' }"
-            :closable="!saving"
-        >
+        <Dialog v-model:visible="showForm" :header="modoEdicao ? 'Editar utilizador' : 'Novo utilizador'" modal
+            :style="{ width: 'min(95vw, 620px)' }" :closable="!saving">
             <form class="user-form" @submit.prevent="salvar">
                 <div class="field">
                     <label for="nome_completo">Nome completo *</label>
-                    <InputText
-                        id="nome_completo"
-                        v-model="form.nome_completo"
-                        required
-                        class="w-full"
-                        autocomplete="name"
-                    />
+                    <InputText id="nome_completo" v-model="form.nome_completo" required class="w-full"
+                        autocomplete="name" />
                 </div>
 
                 <div class="field">
                     <label for="email">Email *</label>
-                    <InputText
-                        id="email"
-                        v-model="form.email"
-                        type="email"
-                        required
-                        class="w-full"
-                        autocomplete="email"
-                    />
+                    <InputText id="email" v-model="form.email" type="email" required class="w-full"
+                        autocomplete="email" />
                 </div>
 
                 <div class="field">
                     <label for="username">Nome de utilizador *</label>
-                    <InputText
-                        id="username"
-                        v-model="form.username"
-                        required
-                        class="w-full"
-                        autocomplete="username"
-                    />
+                    <InputText id="username" v-model="form.username" required class="w-full" autocomplete="username" />
                 </div>
 
                 <div class="field">
@@ -661,76 +593,38 @@ onMounted(async () => {
                         {{ modoEdicao ? '(deixe vazio para manter)' : '*' }}
                     </label>
 
-                    <Password
-                        id="password_hash"
-                        v-model="form.password_hash"
-                        :required="!modoEdicao"
-                        :feedback="!modoEdicao"
-                        toggleMask
-                        class="w-full"
-                        inputClass="w-full"
-                        autocomplete="new-password"
-                    />
+                    <Password id="password_hash" v-model="form.password_hash" :required="!modoEdicao"
+                        :feedback="!modoEdicao" toggleMask class="w-full" inputClass="w-full"
+                        autocomplete="new-password" />
                 </div>
 
                 <div class="field">
                     <label for="role_id">Perfil *</label>
-                    <Dropdown
-                        id="role_id"
-                        v-model="form.role_id"
-                        :options="roleOptions"
-                        optionLabel="label"
-                        optionValue="value"
-                        placeholder="Seleccione um perfil"
-                        class="w-full"
-                        :loading="roles.length === 0"
-                    />
+                    <Dropdown id="role_id" v-model="form.role_id" :options="roleOptions" optionLabel="label"
+                        optionValue="value" placeholder="Seleccione um perfil" class="w-full"
+                        :loading="roles.length === 0" />
                 </div>
 
                 <div class="field">
                     <label for="foto">Fotografia</label>
 
-                    <input
-                        id="foto"
-                        ref="fotoInput"
-                        type="file"
-                        accept="image/*"
-                        @change="seleccionarFoto"
-                    />
+                    <input id="foto" ref="fotoInput" type="file" accept="image/*" @change="seleccionarFoto" />
 
-                    <img
-                        v-if="fotoPreview"
-                        :src="fotoPreview"
-                        alt="Pré-visualização da fotografia"
-                        class="photo-preview"
-                    />
+                    <img v-if="fotoPreview" :src="fotoPreview" alt="Pré-visualização da fotografia"
+                        class="photo-preview" />
                 </div>
 
                 <div class="field checkbox-field">
-                    <Checkbox
-                        v-model="form.ativo"
-                        inputId="ativo"
-                        binary
-                    />
+                    <Checkbox v-model="form.ativo" inputId="ativo" binary />
                     <label for="ativo">Utilizador activo</label>
                 </div>
 
                 <div class="form-actions">
-                    <Button
-                        type="button"
-                        label="Cancelar"
-                        severity="secondary"
-                        outlined
-                        :disabled="saving"
-                        @click="showForm = false"
-                    />
+                    <Button type="button" label="Cancelar" severity="secondary" outlined :disabled="saving"
+                        @click="showForm = false" />
 
-                    <Button
-                        type="submit"
-                        :label="modoEdicao ? 'Guardar alterações' : 'Criar utilizador'"
-                        icon="pi pi-check"
-                        :loading="saving"
-                    />
+                    <Button type="submit" :label="modoEdicao ? 'Guardar alterações' : 'Criar utilizador'"
+                        icon="pi pi-check" :loading="saving" />
                 </div>
             </form>
         </Dialog>

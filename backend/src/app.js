@@ -12,7 +12,6 @@ const permissionRoutes = require('./routes/permissionRoutes');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
-// ================= Novos módulos SIAS =================
 const cursosRoutes = require('./routes/cursosRoutes');
 const docentesRoutes = require('./routes/docentesRoutes');
 const estudantesRoutes = require('./routes/estudantesRoutes');
@@ -28,7 +27,7 @@ const app = express();
 
 app.use(express.json());
 app.use(cors());
-
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use((req, res, next) => {
     const inicio = Date.now();
     console.log('');
@@ -56,14 +55,13 @@ app.use((req, res, next) => {
     next();
 });
 
-// Expor a pasta de uploads estaticamente (para visualizar os ficheiros guardados)
-app.use('/uploads', express.static(path.resolve(__dirname, '..', 'uploads')));
-app.use('/src/uploads', express.static(path.resolve(__dirname, '..', 'uploads')));
+// app.use('/uploads', express.static(path.resolve(__dirname, '..', 'uploads')));
+// app.use('/src/uploads', express.static(path.resolve(__dirname, '..', 'uploads')));
+// app.use('/uploads', express.static(path.join(__dirname, 'src', 'uploads')));
+console.log("A procurar uploads em:", path.join(__dirname, 'uploads'));
 
-// Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Rotas da API
 app.use('/api/seed', adminRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -71,7 +69,6 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/permissoes', permissionRoutes);
 app.use('/api/moonograph', monografiaRoutes);
 
-// --- Novos módulos ---
 app.use('/api/cursos', cursosRoutes);
 app.use('/api/docentes', docentesRoutes);
 app.use('/api/estudantes', estudantesRoutes);
