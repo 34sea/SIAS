@@ -7,6 +7,110 @@ const pool = require('../config/db');
  *     description: Gestão dos cursos da instituição
  */
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Curso:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           example: 1
+ *         nome:
+ *           type: string
+ *           example: "Engenharia Informática"
+ *         codigo:
+ *           type: string
+ *           example: "LEI"
+ *         descricao:
+ *           type: string
+ *           nullable: true
+ *           example: "Licenciatura em Engenharia Informática"
+ *         ativo:
+ *           type: integer
+ *           description: "1 para activo, 0 para inactivo"
+ *           example: 1
+ *         criado_em:
+ *           type: string
+ *           format: date-time
+ *           example: "2026-01-15T10:00:00.000Z"
+ *         atualizado_em:
+ *           type: string
+ *           format: date-time
+ *           example: "2026-02-01T14:20:00.000Z"
+ *         total_estudantes:
+ *           type: integer
+ *           description: "Número total de estudantes inscritos no curso"
+ *           example: 42
+ *
+ *     CursosResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         total:
+ *           type: integer
+ *           example: 3
+ *         data:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Curso'
+ *
+ *     CursoResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         data:
+ *           $ref: '#/components/schemas/Curso'
+ *
+ *     CursoErrorResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: false
+ *         message:
+ *           type: string
+ *           example: "Curso não encontrado."
+ */
+
+/**
+ * @swagger
+ * /api/cursos:
+ *   get:
+ *     summary: Listar cursos
+ *     description: Retorna a lista de cursos registados na instituição, permitindo filtragem opcional por pesquisa textual (nome, código ou descrição) e estado de actividade, incluindo a contagem total de estudantes por curso.
+ *     tags: [Cursos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Pesquisa por nome, código ou descrição do curso.
+ *         example: "Informática"
+ *       - in: query
+ *         name: ativo
+ *         schema:
+ *           type: string
+ *         description: Filtra por estado de actividade (1 / true = Activo, 0 / false = Inactivo).
+ *         example: "1"
+ *     responses:
+ *       200:
+ *         description: Lista de cursos obtida com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CursosResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ */
+
 const getCursos = async (req, res, next) => {
     try {
         const { search = '', ativo } = req.query;
@@ -32,7 +136,39 @@ const getCursos = async (req, res, next) => {
         return res.status(200).json({ success: true, total: cursos.length, data: cursos });
     } catch (error) { next(error); }
 };
-
+/**
+ * @swagger
+ * /api/cursos/{id}:
+ *   get:
+ *     summary: Obter curso por ID
+ *     description: Retorna os detalhes completos de um curso específico através do seu ID, incluindo o total de estudantes associados.
+ *     tags: [Cursos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do curso.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Curso encontrado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CursoResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Curso não encontrado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CursoErrorResponse'
+ */
 const getCursoById = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -51,7 +187,81 @@ const getCursoById = async (req, res, next) => {
         return res.status(200).json({ success: true, data: rows[0] });
     } catch (error) { next(error); }
 };
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     CreateCursoRequest:
+ *       type: object
+ *       required:
+ *         - nome
+ *         - codigo
+ *       properties:
+ *         nome:
+ *           type: string
+ *           example: "Engenharia Informática"
+ *         codigo:
+ *           type: string
+ *           example: "LEI"
+ *         descricao:
+ *           type: string
+ *           nullable: true
+ *           example: "Licenciatura em Engenharia Informática"
+ *         ativo:
+ *           type: boolean
+ *           description: "True/1 para activo, False/0 para inactivo"
+ *           example: true
+ *
+ *     CursoCreatedResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         message:
+ *           type: string
+ *           example: "Curso criado com sucesso."
+ *         data:
+ *           $ref: '#/components/schemas/Curso'
+ */
 
+/**
+ * @swagger
+ * /api/cursos:
+ *   post:
+ *     summary: Criar novo curso
+ *     description: Regista um novo curso na instituição com nome, código, descrição opcional e estado de actividade.
+ *     tags: [Cursos]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateCursoRequest'
+ *     responses:
+ *       201:
+ *         description: Curso criado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CursoCreatedResponse'
+ *       400:
+ *         description: Campos obrigatórios em falta (nome ou código).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CursoErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       409:
+ *         description: Já existe um curso com este código ou nome.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CursoErrorResponse'
+ */
 const createCurso = async (req, res, next) => {
     try {
         const { nome, codigo, descricao, ativo } = req.body;
@@ -76,6 +286,124 @@ const createCurso = async (req, res, next) => {
         return res.status(201).json({ success: true, message: 'Curso criado com sucesso.', data: curso[0] });
     } catch (error) { next(error); }
 };
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     UpdateCursoRequest:
+ *       type: object
+ *       properties:
+ *         nome:
+ *           type: string
+ *           example: "Engenharia Informática"
+ *         codigo:
+ *           type: string
+ *           example: "LEI"
+ *         descricao:
+ *           type: string
+ *           nullable: true
+ *           example: "Licenciatura em Engenharia Informática"
+ *         ativo:
+ *           type: boolean
+ *           description: "True/1 para activo, False/0 para inactivo"
+ *           example: true
+ *
+ *     CursoUpdatedResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         message:
+ *           type: string
+ *           example: "Curso actualizado com sucesso."
+ *         data:
+ *           $ref: '#/components/schemas/Curso'
+ */
+
+/**
+ * @swagger
+ * /api/cursos/{id}:
+ *   put:
+ *     summary: Actualizar curso
+ *     description: Actualiza os dados de um curso existente (como nome, código, descrição ou estado de actividade) através do seu ID.
+ *     tags: [Cursos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do curso.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateCursoRequest'
+ *     responses:
+ *       200:
+ *         description: Curso actualizado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CursoUpdatedResponse'
+ *       400:
+ *         description: Nenhum campo enviado para actualização ou ID inválido.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CursoErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Curso não encontrado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CursoErrorResponse'
+ *
+ *   delete:
+ *     summary: Eliminar curso
+ *     description: Remove permanentemente um curso da instituição através do seu ID.
+ *     tags: [Cursos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do curso.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Curso eliminado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Curso eliminado com sucesso."
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Curso não encontrado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CursoErrorResponse'
+ */
 
 const updateCurso = async (req, res, next) => {
     try {

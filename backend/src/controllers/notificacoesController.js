@@ -4,7 +4,130 @@ const pool = require('../config/db');
  * @swagger
  * tags:
  *   - name: Notificacoes
- *     description: Notificações internas do sistema
+ *     description: Gestão das notificações internas do sistema
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *
+ *     Notificacao:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           example: 1
+ *         utilizador_id:
+ *           type: integer
+ *           example: 2
+ *         tipo:
+ *           type: string
+ *           example: "SISTEMA"
+ *         titulo:
+ *           type: string
+ *           example: "Nova Análise Concluída"
+ *         mensagem:
+ *           type: string
+ *           example: "A sua monografia foi analisada com sucesso."
+ *         referencia_tipo:
+ *           type: string
+ *           nullable: true
+ *           example: "ANALISE"
+ *         referencia_id:
+ *           type: integer
+ *           nullable: true
+ *           example: 5
+ *         lida:
+ *           type: integer
+ *           description: "1 para lida, 0 para não lida"
+ *           example: 0
+ *         data_leitura:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           example: null
+ *         criado_em:
+ *           type: string
+ *           format: date-time
+ *           example: "2026-10-18T08:30:00.000Z"
+ *         nome_completo:
+ *           type: string
+ *           example: "Martinho Domingos"
+ *
+ *     CreateNotificacaoRequest:
+ *       type: object
+ *       required:
+ *         - utilizador_id
+ *         - tipo
+ *         - titulo
+ *         - mensagem
+ *       properties:
+ *         utilizador_id:
+ *           type: integer
+ *           example: 2
+ *         tipo:
+ *           type: string
+ *           example: "SISTEMA"
+ *         titulo:
+ *           type: string
+ *           example: "Nova Análise Concluída"
+ *         mensagem:
+ *           type: string
+ *           example: "A sua monografia foi analisada com sucesso."
+ *         referencia_tipo:
+ *           type: string
+ *           nullable: true
+ *           example: "ANALISE"
+ *         referencia_id:
+ *           type: integer
+ *           nullable: true
+ *           example: 5
+ *
+ *     NotificacoesResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         total:
+ *           type: integer
+ *           example: 3
+ *         data:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Notificacao'
+ *
+ *     NotificacaoResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         data:
+ *           $ref: '#/components/schemas/Notificacao'
+ *
+ *     NotificacaoCreatedResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         message:
+ *           type: string
+ *           example: "Notificação criada com sucesso."
+ *         data:
+ *           $ref: '#/components/schemas/Notificacao'
+ *
+ *     NotificacaoErrorResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: false
+ *         message:
+ *           type: string
+ *           example: "Notificação não encontrada."
  */
 
 /**
@@ -12,12 +135,60 @@ const pool = require('../config/db');
  * /api/notificacoes:
  *   get:
  *     summary: Listar notificações
+ *     description: Retorna a lista de notificações do sistema, permitindo filtragem opcional por ID do utilizador e estado de leitura.
  *     tags: [Notificacoes]
- *     security: - bearerAuth: []
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: utilizador_id
+ *         schema:
+ *           type: integer
+ *         description: Filtra as notificações pelo ID do utilizador destinatário.
+ *         example: 2
+ *       - in: query
+ *         name: lida
+ *         schema:
+ *           type: integer
+ *         description: Filtra pelo estado de leitura (1 = Lida, 0 = Não lida).
+ *         example: 0
+ *     responses:
+ *       200:
+ *         description: Lista de notificações obtida com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotificacoesResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *
  *   post:
  *     summary: Criar notificação
+ *     description: Cria e envia uma nova notificação interna para um utilizador específico.
  *     tags: [Notificacoes]
- *     security: - bearerAuth: []
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateNotificacaoRequest'
+ *     responses:
+ *       201:
+ *         description: Notificação criada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotificacaoCreatedResponse'
+ *       400:
+ *         description: Campos obrigatórios em falta (utilizador, tipo, título ou mensagem).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotificacaoErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
  */
 const getNotificacoes = async (req, res, next) => {
     try {
@@ -63,13 +234,78 @@ const criarNotificacao = async (req, res, next) => {
  * /api/notificacoes/{id}/lida:
  *   patch:
  *     summary: Marcar notificação como lida
+ *     description: Altera o estado de uma notificação específica para lida e regista a data e hora actuais.
  *     tags: [Notificacoes]
- *     security: - bearerAuth: []
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID da notificação.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Notificação marcada como lida com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Notificação marcada como lida."
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Notificação não encontrada.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotificacaoErrorResponse'
+ *
  * /api/notificacoes/{id}:
  *   delete:
  *     summary: Eliminar notificação
+ *     description: Remove permanentemente uma notificação do sistema através do seu ID.
  *     tags: [Notificacoes]
- *     security: - bearerAuth: []
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID da notificação.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Notificação eliminada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Notificação eliminada com sucesso."
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Notificação não encontrada.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotificacaoErrorResponse'
  */
 const marcarComoLida = async (req, res, next) => {
     try {

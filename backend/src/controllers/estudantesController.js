@@ -4,7 +4,129 @@ const pool = require('../config/db');
  * @swagger
  * tags:
  *   - name: Estudantes
- *     description: Gestão de estudantes
+ *     description: Gestão do perfil e registo de estudantes
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *
+ *     Estudante:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           example: 1
+ *         utilizador_id:
+ *           type: integer
+ *           example: 2
+ *         nome_completo:
+ *           type: string
+ *           example: "Martinho Domingos"
+ *         email:
+ *           type: string
+ *           format: email
+ *           example: "martinho@email.com"
+ *         username:
+ *           type: string
+ *           example: "martinho"
+ *         foto:
+ *           type: string
+ *           nullable: true
+ *           example: "uploads/users/user-1.png"
+ *         curso_id:
+ *           type: integer
+ *           example: 3
+ *         curso_nome:
+ *           type: string
+ *           example: "Engenharia Informática"
+ *         numero_estudante:
+ *           type: string
+ *           example: "20240102"
+ *         ano_ingresso:
+ *           type: integer
+ *           example: 2024
+ *         ativo:
+ *           type: integer
+ *           description: "1 para activo, 0 para inactivo"
+ *           example: 1
+ *         criado_em:
+ *           type: string
+ *           format: date-time
+ *           example: "2026-03-01T08:30:00.000Z"
+ *
+ *     EstudantesResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         total:
+ *           type: integer
+ *           example: 10
+ *         data:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Estudante'
+ *
+ *     EstudanteResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         data:
+ *           $ref: '#/components/schemas/Estudante'
+ *
+ *     EstudanteErrorResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: false
+ *         message:
+ *           type: string
+ *           example: "Estudante não encontrado."
+ */
+
+/**
+ * @swagger
+ * /api/estudantes:
+ *   get:
+ *     summary: Listar estudantes
+ *     description: Retorna a lista de estudantes cadastrados no sistema, permitindo filtragem por pesquisa textual (nome, email ou número de estudante), curso e estado de actividade.
+ *     tags: [Estudantes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Pesquisa por nome completo, email ou número de estudante.
+ *         example: "Martinho"
+ *       - in: query
+ *         name: curso_id
+ *         schema:
+ *           type: integer
+ *         description: Filtra os estudantes pelo ID do curso.
+ *         example: 3
+ *       - in: query
+ *         name: ativo
+ *         schema:
+ *           type: string
+ *         description: Filtra pelo estado de actividade (1 / true = Activo, 0 / false = Inactivo).
+ *         example: "1"
+ *     responses:
+ *       200:
+ *         description: Lista de estudantes obtida com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/EstudantesResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
  */
 
 const getEstudantes = async (req, res, next) => {
@@ -39,6 +161,40 @@ const getEstudantes = async (req, res, next) => {
     } catch (error) { next(error); }
 };
 
+/**
+ * @swagger
+ * /api/estudantes/{id}:
+ *   get:
+ *     summary: Consultar estudante por ID
+ *     description: Retorna os dados detalhados de um estudante específico.
+ *     tags: [Estudantes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do estudante.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Estudante encontrado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/EstudanteResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Estudante não encontrado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/EstudanteErrorResponse'
+ */
+
 const getEstudanteById = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -56,6 +212,86 @@ const getEstudanteById = async (req, res, next) => {
         return res.status(200).json({ success: true, data: rows[0] });
     } catch (error) { next(error); }
 };
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     CreateEstudanteRequest:
+ *       type: object
+ *       required:
+ *         - utilizador_id
+ *         - curso_id
+ *       properties:
+ *         utilizador_id:
+ *           type: integer
+ *           example: 2
+ *         curso_id:
+ *           type: integer
+ *           example: 3
+ *         numero_estudante:
+ *           type: string
+ *           nullable: true
+ *           example: "20240102"
+ *         ano_ingresso:
+ *           type: integer
+ *           nullable: true
+ *           example: 2024
+ *         ativo:
+ *           type: boolean
+ *           description: "True/1 para activo, False/0 para inactivo"
+ *           example: true
+ *
+ *     EstudanteCreatedResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         message:
+ *           type: string
+ *           example: "Estudante registado com sucesso."
+ *         data:
+ *           $ref: '#/components/schemas/Estudante'
+ */
+
+/**
+ * @swagger
+ * /api/estudantes:
+ *   post:
+ *     summary: Registar novo estudante
+ *     description: Associa um utilizador existente a um curso, criando um novo registo de estudante no sistema.
+ *     tags: [Estudantes]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateEstudanteRequest'
+ *     responses:
+ *       201:
+ *         description: Estudante registado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/EstudanteCreatedResponse'
+ *       400:
+ *         description: Campos obrigatórios em falta (utilizador ou curso) ou entidade inexistente.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/EstudanteErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       409:
+ *         description: Este utilizador já se encontra registado como estudante.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/EstudanteErrorResponse'
+ */
 
 const createEstudante = async (req, res, next) => {
     try {
@@ -92,6 +328,125 @@ const createEstudante = async (req, res, next) => {
         return res.status(201).json({ success: true, message: 'Estudante registado com sucesso.', data: estudante[0] });
     } catch (error) { next(error); }
 };
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     UpdateEstudanteRequest:
+ *       type: object
+ *       properties:
+ *         curso_id:
+ *           type: integer
+ *           example: 3
+ *         numero_estudante:
+ *           type: string
+ *           nullable: true
+ *           example: "20240102"
+ *         ano_ingresso:
+ *           type: integer
+ *           nullable: true
+ *           example: 2024
+ *         ativo:
+ *           type: boolean
+ *           description: "True/1 para activo, False/0 para inactivo"
+ *           example: true
+ *
+ *     EstudanteUpdatedResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         message:
+ *           type: string
+ *           example: "Estudante actualizado com sucesso."
+ *         data:
+ *           $ref: '#/components/schemas/Estudante'
+ */
+
+/**
+ * @swagger
+ * /api/estudantes/{id}:
+ *   put:
+ *     summary: Actualizar estudante
+ *     description: Actualiza os dados de um estudante existente (como curso, número de estudante, ano de ingresso ou estado de actividade) através do seu ID.
+ *     tags: [Estudantes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do estudante.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateEstudanteRequest'
+ *     responses:
+ *       200:
+ *         description: Estudante actualizado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/EstudanteUpdatedResponse'
+ *       400:
+ *         description: Nenhum campo enviado para actualização ou ID inválido.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/EstudanteErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Estudante não encontrado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/EstudanteErrorResponse'
+ *
+ *   delete:
+ *     summary: Eliminar estudante
+ *     description: Remove permanentemente um estudante do sistema através do seu ID.
+ *     tags: [Estudantes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do estudante.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Estudante eliminado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Estudante eliminado com sucesso."
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Estudante não encontrado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/EstudanteErrorResponse'
+ */
 
 const updateEstudante = async (req, res, next) => {
     try {

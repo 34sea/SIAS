@@ -1,5 +1,4 @@
 const pool = require('../config/db');
-
 /**
  * @swagger
  * tags:
@@ -9,31 +8,215 @@ const pool = require('../config/db');
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     Docente:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           example: 1
+ *         utilizador_id:
+ *           type: integer
+ *           example: 2
+ *         nome_completo:
+ *           type: string
+ *           example: "Dr. João Silva"
+ *         email:
+ *           type: string
+ *           format: email
+ *           example: "joao.silva@email.com"
+ *         username:
+ *           type: string
+ *           example: "joao.silva"
+ *         foto:
+ *           type: string
+ *           nullable: true
+ *           example: "uploads/users/docente-1.png"
+ *         departamento:
+ *           type: string
+ *           nullable: true
+ *           example: "Departamento de Engenharia Informática"
+ *         especialidade:
+ *           type: string
+ *           nullable: true
+ *           example: "Inteligência Artificial e Sistemas Distribuídos"
+ *         grau_academico:
+ *           type: string
+ *           nullable: true
+ *           example: "Doutoramento"
+ *         numero_funcionario:
+ *           type: string
+ *           nullable: true
+ *           example: "DOC202401"
+ *         ativo:
+ *           type: integer
+ *           description: "1 para activo, 0 para inactivo"
+ *           example: 1
+ *         criado_em:
+ *           type: string
+ *           format: date-time
+ *           example: "2026-03-01T08:30:00.000Z"
+ *
+ *     CreateDocenteRequest:
+ *       type: object
+ *       required:
+ *         - utilizador_id
+ *       properties:
+ *         utilizador_id:
+ *           type: integer
+ *           example: 2
+ *         departamento:
+ *           type: string
+ *           nullable: true
+ *           example: "Departamento de Engenharia Informática"
+ *         especialidade:
+ *           type: string
+ *           nullable: true
+ *           example: "Inteligência Artificial"
+ *         grau_academico:
+ *           type: string
+ *           nullable: true
+ *           example: "Doutoramento"
+ *         numero_funcionario:
+ *           type: string
+ *           nullable: true
+ *           example: "DOC202401"
+ *         ativo:
+ *           type: boolean
+ *           example: true
+ *
+ *     UpdateDocenteRequest:
+ *       type: object
+ *       properties:
+ *         departamento:
+ *           type: string
+ *           nullable: true
+ *           example: "Departamento de Engenharia Informática"
+ *         especialidade:
+ *           type: string
+ *           nullable: true
+ *           example: "Sistemas Distribuídos"
+ *         grau_academico:
+ *           type: string
+ *           nullable: true
+ *           example: "Mestrado"
+ *         numero_funcionario:
+ *           type: string
+ *           nullable: true
+ *           example: "DOC202401"
+ *         ativo:
+ *           type: boolean
+ *           example: true
+ *
+ *     DocentesResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         total:
+ *           type: integer
+ *           example: 5
+ *         data:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Docente'
+ *
+ *     DocenteResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         data:
+ *           $ref: '#/components/schemas/Docente'
+ *
+ *     DocenteErrorResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: false
+ *         message:
+ *           type: string
+ *           example: "Docente não encontrado."
+ */
+
+/**
+ * @swagger
  * /api/docentes:
  *   get:
  *     summary: Listar docentes
+ *     description: Retorna a lista de docentes registados, permitindo filtragem opcional por texto (nome, email, especialidade ou departamento) e estado de actividade.
  *     tags: [Docentes]
- *     security: - bearerAuth: []
- *     responses: 200: { description: Lista de docentes. }
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Pesquisa textual por nome, email, especialidade ou departamento.
+ *         example: "Inteligência"
+ *       - in: query
+ *         name: ativo
+ *         schema:
+ *           type: string
+ *         description: Filtra por estado de actividade (1 / true ou 0 / false).
+ *         example: "1"
+ *     responses:
+ *       200:
+ *         description: Lista de docentes obtida com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DocentesResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *
  *   post:
  *     summary: Criar docente
+ *     description: Associa um utilizador existente ao perfil de docente no sistema.
  *     tags: [Docentes]
- *     security: - bearerAuth: []
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [utilizador_id]
- *             properties:
- *               utilizador_id: { type: integer }
- *               departamento: { type: string }
- *               especialidade: { type: string }
- *               grau_academico: { type: string }
- *               numero_funcionario: { type: string }
- *               ativo: { type: boolean }
- *     responses: 201: { description: Docente criado. }
+ *             $ref: '#/components/schemas/CreateDocenteRequest'
+ *     responses:
+ *       201:
+ *         description: Docente criado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Docente criado com sucesso."
+ *                 data:
+ *                   $ref: '#/components/schemas/Docente'
+ *       400:
+ *         description: Dados inválidos ou utilizador obrigatório em falta.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DocenteErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       409:
+ *         description: O utilizador já se encontra registado como docente.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DocenteErrorResponse'
  */
 const getDocentes = async (req, res, next) => {
     try {
@@ -61,22 +244,126 @@ const getDocentes = async (req, res, next) => {
         return res.status(200).json({ success: true, total: docentes.length, data: docentes });
     } catch (error) { next(error); }
 };
-
 /**
  * @swagger
  * /api/docentes/{id}:
  *   get:
  *     summary: Obter docente por ID
+ *     description: Retorna os detalhes completos de um docente específico através do seu ID.
  *     tags: [Docentes]
- *     security: - bearerAuth: []
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do docente.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Docente encontrado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DocenteResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Docente não encontrado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DocenteErrorResponse'
+ *
  *   put:
  *     summary: Actualizar docente
+ *     description: Actualiza os dados profissionais e académicos de um docente existente.
  *     tags: [Docentes]
- *     security: - bearerAuth: []
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do docente.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateDocenteRequest'
+ *     responses:
+ *       200:
+ *         description: Docente actualizado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Docente actualizado com sucesso."
+ *                 data:
+ *                   $ref: '#/components/schemas/Docente'
+ *       400:
+ *         description: Dados inválidos ou nenhum campo enviado para actualização.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DocenteErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Docente não encontrado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DocenteErrorResponse'
+ *
  *   delete:
  *     summary: Eliminar docente
+ *     description: Remove permanentemente um docente do sistema através do seu ID.
  *     tags: [Docentes]
- *     security: - bearerAuth: []
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do docente.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Docente eliminado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Docente eliminado com sucesso."
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Docente não encontrado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DocenteErrorResponse'
  */
 const getDocenteById = async (req, res, next) => {
     try {
@@ -94,6 +381,61 @@ const getDocenteById = async (req, res, next) => {
         return res.status(200).json({ success: true, data: rows[0] });
     } catch (error) { next(error); }
 };
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     DocenteCreatedResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         message:
+ *           type: string
+ *           example: "Docente registado com sucesso."
+ *         data:
+ *           $ref: '#/components/schemas/Docente'
+ */
+
+/**
+ * @swagger
+ * /api/docentes:
+ *   post:
+ *     summary: Registar novo docente
+ *     description: Associa um utilizador existente ao perfil de docente, criando um novo registo no sistema com as informações académicas e profissionais fornecidas.
+ *     tags: [Docentes]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateDocenteRequest'
+ *     responses:
+ *       201:
+ *         description: Docente registado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DocenteCreatedResponse'
+ *       400:
+ *         description: Campo obrigatório em falta (utilizador_id) ou utilizador inexistente.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DocenteErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       409:
+ *         description: Este utilizador já se encontra registado como docente.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DocenteErrorResponse'
+ */
 
 const createDocente = async (req, res, next) => {
     try {
@@ -124,7 +466,105 @@ const createDocente = async (req, res, next) => {
         return res.status(201).json({ success: true, message: 'Docente registado com sucesso.', data: docente[0] });
     } catch (error) { next(error); }
 };
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     DocenteUpdatedResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         message:
+ *           type: string
+ *           example: "Docente actualizado com sucesso."
+ *         data:
+ *           $ref: '#/components/schemas/Docente'
+ */
 
+/**
+ * @swagger
+ * /api/docentes/{id}:
+ *   put:
+ *     summary: Actualizar docente
+ *     description: Actualiza os dados profissionais e académicos de um docente existente (como departamento, especialidade, grau académico, número de funcionário ou estado de actividade) através do seu ID.
+ *     tags: [Docentes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do docente.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateDocenteRequest'
+ *     responses:
+ *       200:
+ *         description: Docente actualizado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DocenteUpdatedResponse'
+ *       400:
+ *         description: Nenhum campo enviado para actualização ou ID inválido.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DocenteErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Docente não encontrado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DocenteErrorResponse'
+ *
+ *   delete:
+ *     summary: Eliminar docente
+ *     description: Remove permanentemente um docente do sistema através do seu ID.
+ *     tags: [Docentes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do docente.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Docente eliminado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Docente eliminado com sucesso."
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Docente não encontrado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DocenteErrorResponse'
+ */
 const updateDocente = async (req, res, next) => {
     try {
         const { id } = req.params;

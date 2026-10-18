@@ -10,7 +10,198 @@ const {
  * @swagger
  * tags:
  *   - name: Analises
- *     description: Motor de análise de similaridade (integração com Python)
+ *     description: Motor de análise de similaridade e integração com Python
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *
+ *     Analise:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           example: 1
+ *         monografia_versao_id:
+ *           type: integer
+ *           example: 3
+ *         iniciado_por:
+ *           type: integer
+ *           example: 1
+ *         algoritmo:
+ *           type: string
+ *           example: "tfidf_cosine"
+ *         versao_algoritmo:
+ *           type: string
+ *           example: "1.0.0"
+ *         estado:
+ *           type: string
+ *           example: "CONCLUIDO"
+ *         similaridade_geral:
+ *           type: number
+ *           format: float
+ *           example: 15.4
+ *         classificacao:
+ *           type: string
+ *           example: "BAIXA"
+ *         data_inicio:
+ *           type: string
+ *           format: date-time
+ *           example: "2026-09-18T08:30:00.000Z"
+ *         data_conclusao:
+ *           type: string
+ *           format: date-time
+ *           example: "2026-09-18T08:31:00.000Z"
+ *         erro_mensagem:
+ *           type: string
+ *           nullable: true
+ *           example: null
+ *         criado_em:
+ *           type: string
+ *           format: date-time
+ *           example: "2026-09-18T08:30:00.000Z"
+ *         numero_versao:
+ *           type: integer
+ *           example: 1
+ *         monografia_titulo:
+ *           type: string
+ *           example: "Sistema de Gestão Académica"
+ *         estudante_nome:
+ *           type: string
+ *           example: "Dircia Domingos"
+ *
+ *     TrechoSemelhante:
+ *       type: object
+ *       properties:
+ *         texto_documento_origem:
+ *           type: string
+ *           example: "Texto extraído da monografia..."
+ *         texto_documento_comparado:
+ *           type: string
+ *           example: "Texto extraído do documento de referência..."
+ *         pagina_origem:
+ *           type: integer
+ *           example: 12
+ *         pagina_comparada:
+ *           type: integer
+ *           example: 5
+ *         percentual_similaridade:
+ *           type: number
+ *           format: float
+ *           example: 85.5
+ *         metodo:
+ *           type: string
+ *           example: "cosine"
+ *
+ *     ResultadoComparacao:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           example: 1
+ *         documento_id:
+ *           type: integer
+ *           example: 4
+ *         percentual_similaridade:
+ *           type: number
+ *           format: float
+ *           example: 15.4
+ *         percentual_textual:
+ *           type: number
+ *           format: float
+ *           example: 10.2
+ *         percentual_semantico:
+ *           type: number
+ *           format: float
+ *           example: 20.6
+ *         quantidade_trechos:
+ *           type: integer
+ *           example: 3
+ *         posicao_ranking:
+ *           type: integer
+ *           example: 1
+ *         documento_titulo:
+ *           type: string
+ *           example: "Artigo Base sobre Plágio"
+ *         documento_autor:
+ *           type: string
+ *           example: "João Silva"
+ *         trechos:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/TrechoSemelhante'
+ *
+ *     AnaliseDetalhada:
+ *       allOf:
+ *         - $ref: '#/components/schemas/Analise'
+ *         - type: object
+ *           properties:
+ *             resultados:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/ResultadoComparacao'
+ *
+ *     CreateAnaliseRequest:
+ *       type: object
+ *       required:
+ *         - monografia_versao_id
+ *       properties:
+ *         monografia_versao_id:
+ *           type: integer
+ *           example: 3
+ *         algoritmo:
+ *           type: string
+ *           example: "tfidf_cosine"
+ *         texto_override:
+ *           type: string
+ *           example: "Texto opcional para análise directa..."
+ *
+ *     AnalisesResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         total:
+ *           type: integer
+ *           example: 5
+ *         data:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Analise'
+ *
+ *     AnaliseResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         data:
+ *           $ref: '#/components/schemas/AnaliseDetalhada'
+ *
+ *     AnaliseCreatedResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         message:
+ *           type: string
+ *           example: "Análise iniciada/executada com sucesso."
+ *         data:
+ *           $ref: '#/components/schemas/Analise'
+ *
+ *     AnaliseErrorResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: false
+ *         message:
+ *           type: string
+ *           example: "Análise não encontrada."
  */
 
 /**
@@ -18,23 +209,61 @@ const {
  * /api/analises:
  *   get:
  *     summary: Listar análises
+ *     description: Retorna a lista de análises de similaridade realizadas, permitindo pesquisa por título ou nome do estudante, e filtragem por estado ou monografia.
  *     tags: [Analises]
- *     security: - bearerAuth: []
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Pesquisa por título da monografia ou nome completo do estudante.
+ *         example: "Dircia"
+ *       - in: query
+ *         name: estado
+ *         schema:
+ *           type: string
+ *         description: Filtra pelo estado da análise (ex. CONCLUIDO, PROCESSANDO, ERRO).
+ *         example: "CONCLUIDO"
+ *       - in: query
+ *         name: monografia_id
+ *         schema:
+ *           type: integer
+ *         description: Filtra as análises pelo ID da monografia.
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Lista de análises obtida com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AnalisesResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
  *   post:
  *     summary: Executar análise de similaridade
+ *     description: Inicia um novo processo de análise de similaridade para uma versão de monografia através do motor Python.
  *     tags: [Analises]
- *     security: - bearerAuth: []
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [monografia_versao_id]
- *             properties:
- *               monografia_versao_id: { type: integer }
- *               algoritmo: { type: string }
- *               texto_override: { type: string }
+ *             $ref: '#/components/schemas/CreateAnaliseRequest'
+ *     responses:
+ *       201:
+ *         description: Análise executada ou iniciada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AnaliseCreatedResponse'
+ *       400:
+ *         description: Dados inválidos ou parâmetros em falta.
+ *       401:
+ *         description: Não autenticado ou token inválido.
  */
 const getAnalises = async (req, res, next) => {
     try {
@@ -66,23 +295,38 @@ const getAnalises = async (req, res, next) => {
         return res.status(200).json({ success: true, total: analises.length, data: analises });
     } catch (error) { next(error); }
 };
-
 /**
  * @swagger
  * /api/analises/{id}:
  *   get:
  *     summary: Obter análise por ID
+ *     description: Retorna os detalhes completos de uma análise específica, incluindo os resultados de comparação e os respetivos trechos semelhantes.
  *     tags: [Analises]
- *     security: - bearerAuth: []
- *   post:
- *     summary: Reanalisar análise
- *     tags: [Analises]
- *     security: - bearerAuth: []
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         schema: { type: integer }
+ *         description: ID da análise.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Análise encontrada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AnaliseResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Análise não encontrada.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AnaliseErrorResponse'
  */
 const getAnaliseById = async (req, res, next) => {
     try {
@@ -128,6 +372,93 @@ const getAnaliseById = async (req, res, next) => {
         return res.status(200).json({ success: true, data: analises[0] });
     } catch (error) { next(error); }
 };
+
+/**
+ * @swagger
+ * /api/analises:
+ *   post:
+ *     summary: Executar e criar nova análise de similaridade
+ *     description: Inicia e processa uma nova análise de similaridade para uma versão de monografia utilizando o motor Python.
+ *     tags: [Analises]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateAnaliseRequest'
+ *     responses:
+ *       201:
+ *         description: Análise concluída com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Análise concluída com sucesso."
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     similaridade_geral:
+ *                       type: number
+ *                       format: float
+ *                       example: 15.4
+ *                     classificacao:
+ *                       type: string
+ *                       example: "Baixa"
+ *       400:
+ *         description: A versão da monografia é obrigatória ou dados inválidos.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AnaliseErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Versão da monografia não encontrada.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AnaliseErrorResponse'
+ *       502:
+ *         description: Falha ao executar a análise no serviço Python.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Falha ao executar a análise no serviço Python."
+ *                 erro:
+ *                   type: string
+ *                   example: "Erro detalhado do Python..."
+ *       503:
+ *         description: Serviço de análise (Python) indisponível no momento.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Serviço de análise (Python) indisponível no momento."
+ */
 
 const createAnalise = async (req, res, next) => {
     let connection;
@@ -319,6 +650,47 @@ const createAnalise = async (req, res, next) => {
         if (connection) connection.release();
     }
 };
+
+/**
+ * @swagger
+ * /api/analises/{id}/reanalisar:
+ *   post:
+ *     summary: Redefinir análise para reexecução
+ *     description: Altera o estado de uma análise existente para 'AGUARDANDO' e limpa os campos de conclusão, permitindo que seja executada novamente.
+ *     tags: [Analises]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID da análise a ser redefinida.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Análise redefinida com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Análise redefinida para aguardando. Volte a executar."
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Análise não encontrada.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AnaliseErrorResponse'
+ */
 
 const reanalisarAnalise = async (req, res, next) => {
     try {

@@ -2,7 +2,6 @@ const pool = require('../config/db');
 const fs = require('fs/promises');
 const path = require('path');
 const crypto = require('crypto');
-
 /**
  * @swagger
  * tags:
@@ -19,23 +18,31 @@ const crypto = require('crypto');
  *       properties:
  *         id:
  *           type: integer
+ *           example: 1
  *         estudante_id:
  *           type: integer
+ *           example: 2
  *         estudante_nome:
  *           type: string
+ *           example: "Martinho Domingos"
  *         orientador_id:
  *           type: integer
  *           nullable: true
+ *           example: 1
  *         orientador_nome:
  *           type: string
  *           nullable: true
+ *           example: "Dr. João Silva"
  *         titulo:
  *           type: string
+ *           example: "Sistema de Gestão Académica"
  *         ano:
  *           type: integer
+ *           example: 2026
  *         descricao:
  *           type: string
  *           nullable: true
+ *           example: "Monografia focada em arquitetura de microsserviços."
  *         estado:
  *           type: string
  *           enum:
@@ -46,56 +53,76 @@ const crypto = require('crypto');
  *             - RELATORIO_DISPONIVEL
  *             - ERRO_PROCESSAMENTO
  *             - ARQUIVADA
+ *           example: "SUBMETIDA"
  *         versao_atual:
  *           type: integer
+ *           example: 1
  *         participa_comparacao:
  *           type: boolean
+ *           example: true
  *         criado_em:
  *           type: string
  *           format: date-time
+ *           example: "2026-10-18T08:30:00.000Z"
  *         atualizado_em:
  *           type: string
  *           format: date-time
+ *           example: "2026-10-18T09:30:00.000Z"
  *
  *     MonografiaVersao:
  *       type: object
  *       properties:
  *         id:
  *           type: integer
+ *           example: 1
  *         monografia_id:
  *           type: integer
+ *           example: 1
  *         numero_versao:
  *           type: integer
+ *           example: 1
  *         nome_ficheiro:
  *           type: string
+ *           example: "monografia-1712345678.pdf"
  *         nome_original:
  *           type: string
+ *           example: "Monografia_Final.pdf"
  *         caminho_ficheiro:
  *           type: string
+ *           example: "uploads/monografias/monografia-1712345678.pdf"
  *         extensao:
  *           type: string
+ *           example: "pdf"
  *         mime_type:
  *           type: string
+ *           example: "application/pdf"
  *         tamanho_bytes:
  *           type: integer
+ *           example: 2048576
  *         hash_sha256:
  *           type: string
+ *           example: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
  *         estado:
  *           type: string
  *           enum: [SUBMETIDA, TEXTO_EXTRAIDO, PROCESSADA, ERRO]
+ *           example: "SUBMETIDA"
  *         submetido_por:
  *           type: integer
+ *           example: 2
  *         criado_em:
  *           type: string
  *           format: date-time
+ *           example: "2026-10-18T08:30:00.000Z"
  *
  *     MonografiasResponse:
  *       type: object
  *       properties:
  *         success:
  *           type: boolean
+ *           example: true
  *         total:
  *           type: integer
+ *           example: 10
  *         data:
  *           type: array
  *           items:
@@ -106,6 +133,7 @@ const crypto = require('crypto');
  *       properties:
  *         success:
  *           type: boolean
+ *           example: true
  *         data:
  *           $ref: '#/components/schemas/Monografia'
  *
@@ -114,8 +142,10 @@ const crypto = require('crypto');
  *       properties:
  *         success:
  *           type: boolean
+ *           example: true
  *         message:
  *           type: string
+ *           example: "Monografia submetida com sucesso."
  *         data:
  *           $ref: '#/components/schemas/Monografia'
  *         versao:
@@ -126,8 +156,10 @@ const crypto = require('crypto');
  *       properties:
  *         success:
  *           type: boolean
+ *           example: false
  *         message:
  *           type: string
+ *           example: "Monografia não encontrada."
  */
 
 /**
@@ -197,7 +229,67 @@ const obterMonografia = async (id, executor = pool) => {
 };
 
 /**
- * Obtém uma versão específica de uma monografia.
+ * @swagger
+ * /api/monografias:
+ *   get:
+ *     summary: Listar monografias
+ *     description: Retorna a lista de monografias registadas, permitindo filtragem opcional por pesquisa textual, estado, estudante, orientador, curso ou ano.
+ *     tags: [Monografias]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Pesquisa por título da monografia ou nome completo do estudante.
+ *         example: "Sistema"
+ *       - in: query
+ *         name: estado
+ *         schema:
+ *           type: string
+ *           enum: [SUBMETIDA, AGUARDANDO_ANALISE, EM_ANALISE, ANALISADA, RELATORIO_DISPONIVEL, ERRO_PROCESSAMENTO, ARQUIVADA]
+ *         description: Filtra pelo estado da monografia.
+ *         example: "SUBMETIDA"
+ *       - in: query
+ *         name: estudante_id
+ *         schema:
+ *           type: integer
+ *         description: Filtra pelo ID do estudante.
+ *         example: 2
+ *       - in: query
+ *         name: orientador_id
+ *         schema:
+ *           type: integer
+ *         description: Filtra pelo ID do docente orientador.
+ *         example: 1
+ *       - in: query
+ *         name: curso_id
+ *         schema:
+ *           type: integer
+ *         description: Filtra pelo ID do curso do estudante.
+ *         example: 3
+ *       - in: query
+ *         name: ano
+ *         schema:
+ *           type: integer
+ *         description: Filtra pelo ano da monografia.
+ *         example: 2026
+ *     responses:
+ *       200:
+ *         description: Lista de monografias obtida com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiasResponse'
+ *       400:
+ *         description: Parâmetro de filtro inválido (estado, IDs ou ano incorretos).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
  */
 const obterVersao = async (monografiaId, versaoId) => {
     const [rows] = await pool.query(
@@ -369,7 +461,69 @@ const getMonografias = async (req, res, next) => {
         next(error);
     }
 };
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     MonografiaComVersoes:
+ *       allOf:
+ *         - $ref: '#/components/schemas/Monografia'
+ *         - type: object
+ *           properties:
+ *             versoes:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/MonografiaVersao'
+ *
+ *     MonografiaDetalhadaResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         data:
+ *           $ref: '#/components/schemas/MonografiaComVersoes'
+ */
 
+/**
+ * @swagger
+ * /api/monografias/{id}:
+ *   get:
+ *     summary: Obter monografia por ID
+ *     description: Retorna os detalhes completos de uma monografia específica, incluindo a lista de todas as suas versões associadas ordenadas da mais recente para a mais antiga.
+ *     tags: [Monografias]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID da monografia.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Monografia encontrada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaDetalhadaResponse'
+ *       400:
+ *         description: ID da monografia inválido.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Monografia não encontrada.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaErrorResponse'
+ */
 /**
  * Consulta uma monografia pelo ID, incluindo as versões.
  */
@@ -425,6 +579,84 @@ const getMonografiaById = async (req, res, next) => {
         next(error);
     }
 };
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     CreateMonografiaRequest:
+ *       type: object
+ *       required:
+ *         - titulo
+ *         - ano
+ *         - estudante_id
+ *         - ficheiro
+ *       properties:
+ *         titulo:
+ *           type: string
+ *           maxLength: 500
+ *           example: "Sistema de Gestão Académica"
+ *         ano:
+ *           type: integer
+ *           example: 2026
+ *         descricao:
+ *           type: string
+ *           nullable: true
+ *           example: "Monografia focada em arquitetura de microsserviços."
+ *         estudante_id:
+ *           type: integer
+ *           example: 2
+ *         orientador_id:
+ *           type: integer
+ *           nullable: true
+ *           example: 1
+ *         ficheiro:
+ *           type: string
+ *           format: binary
+ *           description: Ficheiro da monografia (PDF, etc.)
+ */
+
+/**
+ * @swagger
+ * /api/monografias:
+ *   post:
+ *     summary: Submeter nova monografia
+ *     description: Submete uma nova monografia com upload opcional de ficheiro, criando a primeira versão e a monografia dentro de uma transação.
+ *     tags: [Monografias]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateMonografiaRequest'
+ *     responses:
+ *       201:
+ *         description: Monografia submetida com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaCreatedResponse'
+ *       400:
+ *         description: Dados inválidos, campos obrigatórios em falta ou ficheiro não enviado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaErrorResponse'
+ *       401:
+ *         description: Não autenticado, token inválido ou utilizador inativo.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaErrorResponse'
+ *       403:
+ *         description: O estudante não tem permissão para submeter em nome de outro.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaErrorResponse'
+ */
 /**
  * Submete uma nova monografia e cria a primeira versão numa transacção.
  */
@@ -732,7 +964,87 @@ const createMonografia = async (req, res, next) => {
         }
     }
 };
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     UpdateMonografiaRequest:
+ *       type: object
+ *       properties:
+ *         titulo:
+ *           type: string
+ *           maxLength: 500
+ *           example: "Sistema de Gestão Académica Avançado"
+ *         ano:
+ *           type: integer
+ *           example: 2026
+ *         descricao:
+ *           type: string
+ *           nullable: true
+ *           example: "Monografia actualizada com novos módulos de microsserviços."
+ *         orientador_id:
+ *           type: integer
+ *           nullable: true
+ *           example: 2
+ *
+ *     MonografiaUpdatedResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         message:
+ *           type: string
+ *           example: "Monografia atualizada com sucesso."
+ *         data:
+ *           $ref: '#/components/schemas/Monografia'
+ */
 
+/**
+ * @swagger
+ * /api/monografias/{id}:
+ *   put:
+ *     summary: Actualizar metadados da monografia
+ *     description: Actualiza os dados gerais (título, ano, descrição ou orientador) de uma monografia existente sem alterar o documento físico anexado. Não é permitido editar monografias arquivadas.
+ *     tags: [Monografias]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID da monografia.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateMonografiaRequest'
+ *     responses:
+ *       200:
+ *         description: Monografia actualizada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaUpdatedResponse'
+ *       400:
+ *         description: ID inválido, campos incorretos, monografia arquivada ou orientador inexistente.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Monografia não encontrada.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaErrorResponse'
+ */
 /**
  * Actualiza os metadados da monografia sem substituir o documento.
  */
@@ -875,6 +1187,118 @@ const updateMonografia = async (req, res, next) => {
         next(error);
     }
 };
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     MonografiaVersoesResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         total:
+ *           type: integer
+ *           example: 3
+ *         data:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/MonografiaVersao'
+ *
+ *     MonografiaVersaoResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         data:
+ *           $ref: '#/components/schemas/MonografiaVersao'
+ */
+
+/**
+ * @swagger
+ * /api/monografias/{id}/versoes:
+ *   get:
+ *     summary: Listar versões de uma monografia
+ *     description: Retorna todas as versões associadas a uma monografia específica, ordenadas da mais recente para a mais antiga.
+ *     tags: [Monografias]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID da monografia.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Lista de versões obtida com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaVersoesResponse'
+ *       400:
+ *         description: ID da monografia inválido.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Monografia não encontrada.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaErrorResponse'
+ *
+ * /api/monografias/{id}/versoes/{versaoId}:
+ *   get:
+ *     summary: Consultar versão específica de uma monografia
+ *     description: Retorna os dados detalhados de uma versão específica pertencente a uma monografia.
+ *     tags: [Monografias]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID da monografia.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *       - in: path
+ *         name: versaoId
+ *         required: true
+ *         description: ID da versão da monografia.
+ *         schema:
+ *           type: integer
+ *         example: 2
+ *     responses:
+ *       200:
+ *         description: Versão encontrada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaVersaoResponse'
+ *       400:
+ *         description: ID da monografia ou da versão inválido.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Monografia ou versão não encontrada.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaErrorResponse'
+ */
 /**
  * Lista todas as versões de uma monografia.
  */
@@ -974,6 +1398,83 @@ const getMonografiaVersaoById = async (req, res, next) => {
         next(error);
     }
 };
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     CreateMonografiaVersaoRequest:
+ *       type: object
+ *       required:
+ *         - submetido_por
+ *         - ficheiro
+ *       properties:
+ *         submetido_por:
+ *           type: integer
+ *           description: ID do utilizador que está a submeter a nova versão.
+ *           example: 2
+ *         ficheiro:
+ *           type: string
+ *           format: binary
+ *           description: Ficheiro da nova versão da monografia (PDF, etc.).
+ *
+ *     MonografiaVersaoCreatedResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         message:
+ *           type: string
+ *           example: "Nova versão submetida com sucesso."
+ *         data:
+ *           $ref: '#/components/schemas/MonografiaVersao'
+ */
+
+/**
+ * @swagger
+ * /api/monografias/{id}/versoes:
+ *   post:
+ *     summary: Submeter nova versão de uma monografia
+ *     description: Submete um novo ficheiro para criar a próxima versão de uma monografia existente, actualizando a versão actual e o estado da monografia dentro de uma transação.
+ *     tags: [Monografias]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID da monografia.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateMonografiaVersaoRequest'
+ *     responses:
+ *       201:
+ *         description: Nova versão submetida com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaVersaoCreatedResponse'
+ *       400:
+ *         description: ID da monografia/utilizador inválido, ficheiro não enviado ou monografia arquivada.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Monografia não encontrada.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaErrorResponse'
+ */
 /**
  * Submete uma nova versão e preserva o histórico anterior.
  */
@@ -1143,6 +1644,52 @@ const createMonografiaVersao = async (req, res, next) => {
         }
     }
 };
+/**
+ * @swagger
+ * /api/monografias/{id}:
+ *   delete:
+ *     summary: Arquivar monografia
+ *     description: Altera o estado da monografia para 'ARQUIVADA' sem apagar o histórico de versões e ficheiros do sistema.
+ *     tags: [Monografias]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID da monografia a ser arquivada.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Monografia arquivada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Monografia arquivada com sucesso."
+ *       400:
+ *         description: ID inválido ou a monografia já se encontra arquivada.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Monografia não encontrada.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MonografiaErrorResponse'
+ */
 /**
  * Arquiva a monografia sem apagar o histórico de versões.
  */

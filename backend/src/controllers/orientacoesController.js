@@ -4,9 +4,147 @@ const pool = require('../config/db');
  * @swagger
  * tags:
  *   - name: Orientacoes
- *     description: Associação entre estudantes e orientadores
+ *     description: Gestão da associação entre estudantes e orientadores (docentes)
  */
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *
+ *     Orientacao:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           example: 1
+ *         estudante_id:
+ *           type: integer
+ *           example: 2
+ *         docente_id:
+ *           type: integer
+ *           example: 1
+ *         estudante_nome:
+ *           type: string
+ *           example: "Martinho Domingos"
+ *         estudante_email:
+ *           type: string
+ *           format: email
+ *           example: "martinho@email.com"
+ *         estudante_foto:
+ *           type: string
+ *           nullable: true
+ *           example: "uploads/users/user-1.png"
+ *         curso_id:
+ *           type: integer
+ *           example: 3
+ *         curso_nome:
+ *           type: string
+ *           example: "Engenharia Informática"
+ *         docente_nome:
+ *           type: string
+ *           example: "Dr. João Silva"
+ *         docente_email:
+ *           type: string
+ *           format: email
+ *           example: "joao.silva@email.com"
+ *         docente_foto:
+ *           type: string
+ *           nullable: true
+ *           example: "uploads/users/user-2.png"
+ *         data_inicio:
+ *           type: string
+ *           format: date-time
+ *           example: "2026-03-01T00:00:00.000Z"
+ *         data_fim:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           example: null
+ *         estado:
+ *           type: string
+ *           example: "ACTIVO"
+ *         observacoes:
+ *           type: string
+ *           nullable: true
+ *           example: "Orientação principal para o tema de monografia."
+ *         criado_em:
+ *           type: string
+ *           format: date-time
+ *           example: "2026-03-01T08:30:00.000Z"
+ *
+ *     OrientacoesResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         total:
+ *           type: integer
+ *           example: 5
+ *         data:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Orientacao'
+ *
+ *     OrientacaoResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         data:
+ *           $ref: '#/components/schemas/Orientacao'
+ *
+ *     OrientacaoErrorResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: false
+ *         message:
+ *           type: string
+ *           example: "Orientação não encontrada."
+ */
+
+/**
+ * @swagger
+ * /api/orientacoes:
+ *   get:
+ *     summary: Listar orientações
+ *     description: Retorna a lista de orientações registadas, permitindo filtragem opcional por ID do estudante, ID do docente ou estado.
+ *     tags: [Orientacoes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: estudante_id
+ *         schema:
+ *           type: integer
+ *         description: Filtra as orientações pelo ID do estudante.
+ *         example: 2
+ *       - in: query
+ *         name: docente_id
+ *         schema:
+ *           type: integer
+ *         description: Filtra as orientações pelo ID do docente.
+ *         example: 1
+ *       - in: query
+ *         name: estado
+ *         schema:
+ *           type: string
+ *         description: Filtra pelo estado da orientação (ex. ACTIVO, CONCLUIDO, CANCELADO).
+ *         example: "ACTIVO"
+ *     responses:
+ *       200:
+ *         description: Lista de orientações obtida com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/OrientacoesResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ */
 
 const getOrientacoes = async (req, res, next) => {
     try {
@@ -91,7 +229,39 @@ const getOrientacoes = async (req, res, next) => {
     }
 };
 
-
+/**
+ * @swagger
+ * /api/orientacoes/{id}:
+ *   get:
+ *     summary: Consultar orientação por ID
+ *     description: Retorna os dados detalhados de uma associação específica entre estudante e orientador.
+ *     tags: [Orientacoes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID da orientação.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Orientação encontrada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/OrientacaoResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Orientação não encontrada.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/OrientacaoErrorResponse'
+ */
 const getOrientacaoById = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -113,6 +283,118 @@ const getOrientacaoById = async (req, res, next) => {
         return res.status(200).json({ success: true, data: rows[0] });
     } catch (error) { next(error); }
 };
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     CreateOrientacaoRequest:
+ *       type: object
+ *       required:
+ *         - estudante_id
+ *         - docente_id
+ *       properties:
+ *         estudante_id:
+ *           type: integer
+ *           example: 2
+ *         docente_id:
+ *           type: integer
+ *           example: 1
+ *         data_inicio:
+ *           type: string
+ *           format: date
+ *           nullable: true
+ *           example: "2026-03-01"
+ *         data_fim:
+ *           type: string
+ *           format: date
+ *           nullable: true
+ *           example: null
+ *         estado:
+ *           type: string
+ *           example: "ACTIVA"
+ *         observacoes:
+ *           type: string
+ *           nullable: true
+ *           example: "Acompanhamento inicial da monografia."
+ *
+ *     UpdateOrientacaoRequest:
+ *       type: object
+ *       properties:
+ *         data_inicio:
+ *           type: string
+ *           format: date
+ *           nullable: true
+ *           example: "2026-03-01"
+ *         data_fim:
+ *           type: string
+ *           format: date
+ *           nullable: true
+ *           example: "2026-11-30"
+ *         estado:
+ *           type: string
+ *           example: "CONCLUIDA"
+ *         observacoes:
+ *           type: string
+ *           nullable: true
+ *           example: "Orientação concluída com sucesso."
+ *
+ *     OrientacaoCreatedResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         message:
+ *           type: string
+ *           example: "Orientação criada com sucesso."
+ *         data:
+ *           $ref: '#/components/schemas/Orientacao'
+ *
+ *     OrientacaoUpdatedResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         message:
+ *           type: string
+ *           example: "Orientação actualizada com sucesso."
+ *         data:
+ *           $ref: '#/components/schemas/Orientacao'
+ */
+
+/**
+ * @swagger
+ * /api/orientacoes:
+ *   post:
+ *     summary: Criar nova orientação
+ *     description: Associa um estudante a um docente para fins de orientação académica.
+ *     tags: [Orientacoes]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateOrientacaoRequest'
+ *     responses:
+ *       201:
+ *         description: Orientação criada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/OrientacaoCreatedResponse'
+ *       400:
+ *         description: Estudante e docente são obrigatórios ou não encontrados.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/OrientacaoErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ */
 
 const createOrientacao = async (req, res, next) => {
     try {
@@ -148,7 +430,51 @@ const createOrientacao = async (req, res, next) => {
         return res.status(201).json({ success: true, message: 'Orientação criada com sucesso.', data: orientacao[0] });
     } catch (error) { next(error); }
 };
-
+/**
+ * @swagger
+ * /api/orientacoes/{id}:
+ *   put:
+ *     summary: Actualizar orientação
+ *     description: Actualiza os dados de uma orientação existente (como datas, estado ou observações).
+ *     tags: [Orientacoes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID da orientação.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateOrientacaoRequest'
+ *     responses:
+ *       200:
+ *         description: Orientação actualizada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/OrientacaoUpdatedResponse'
+ *       400:
+ *         description: Nenhum campo enviado para actualização.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/OrientacaoErrorResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Orientação não encontrada.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/OrientacaoErrorResponse'
+ */
 const updateOrientacao = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -183,7 +509,46 @@ const updateOrientacao = async (req, res, next) => {
         return res.status(200).json({ success: true, message: 'Orientação actualizada com sucesso.', data: orientacao[0] });
     } catch (error) { next(error); }
 };
-
+/**
+ * @swagger
+ * /api/orientacoes/{id}:
+ *   delete:
+ *     summary: Eliminar orientação
+ *     description: Remove permanentemente uma orientação do sistema através do seu ID.
+ *     tags: [Orientacoes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID da orientação.
+ *         schema:
+ *           type: integer
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Orientação eliminada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Orientação eliminada com sucesso."
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ *       404:
+ *         description: Orientação não encontrada.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/OrientacaoErrorResponse'
+ */
 const deleteOrientacao = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -195,7 +560,33 @@ const deleteOrientacao = async (req, res, next) => {
         return res.status(200).json({ success: true, message: 'Orientação eliminada com sucesso.' });
     } catch (error) { next(error); }
 };
-
+/**
+ * @swagger
+ * /api/orientacoes/estudante/{estudante_id}:
+ *   get:
+ *     summary: Listar orientações por ID do estudante
+ *     description: Retorna todas as orientações associadas a um estudante específico.
+ *     tags: [Orientacoes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: estudante_id
+ *         required: true
+ *         description: ID do estudante.
+ *         schema:
+ *           type: integer
+ *         example: 2
+ *     responses:
+ *       200:
+ *         description: Lista de orientações obtida com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/OrientacoesResponse'
+ *       401:
+ *         description: Não autenticado ou token inválido.
+ */
 const getOrientacoesByEstudante = async (req, res, next) => {
     try {
         const { estudante_id } = req.params;

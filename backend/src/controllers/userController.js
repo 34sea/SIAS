@@ -21,14 +21,14 @@ const bcrypt = require('bcryptjs');
  *           example: 1
  *         nome_completo:
  *           type: string
- *           example: "Martinho Domingos"
+ *           example: "Dircia Domingos"
  *         email:
  *           type: string
  *           format: email
- *           example: "martinho@email.com"
+ *           example: "Dircia@email.com"
  *         username:
  *           type: string
- *           example: "martinho"
+ *           example: "Dircia"
  *         role_id:
  *           type: integer
  *           example: 2
@@ -144,7 +144,7 @@ const bcrypt = require('bcryptjs');
  *         schema:
  *           type: string
  *         description: Pesquisa por nome completo, email ou username.
- *         example: "Martinho"
+ *         example: "Dircia"
  *
  *       - in: query
  *         name: role_id
@@ -331,14 +331,14 @@ const getUserById = async (req, res, next) => {
  *             properties:
  *               nome_completo:
  *                 type: string
- *                 example: "Martinho Domingos"
+ *                 example: "Dircia Domingos"
  *               email:
  *                 type: string
  *                 format: email
- *                 example: "martinho@email.com"
+ *                 example: "Dircia@email.com"
  *               username:
  *                 type: string
- *                 example: "martinho"
+ *                 example: "Dircia"
  *               password_hash:
  *                 type: string
  *                 format: password
@@ -494,14 +494,14 @@ const createUser = async (req, res, next) => {
  *             properties:
  *               nome_completo:
  *                 type: string
- *                 example: "Martinho Macovere Domingos"
+ *                 example: "Dircia Macovere Domingos"
  *               email:
  *                 type: string
  *                 format: email
- *                 example: "martinho@email.com"
+ *                 example: "Dircia@email.com"
  *               username:
  *                 type: string
- *                 example: "martinho"
+ *                 example: "Dircia"
  *               role_id:
  *                 type: integer
  *                 example: 2
