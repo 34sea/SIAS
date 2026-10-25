@@ -218,31 +218,162 @@ const pool = require('../config/db');
  *             schema:
  *               $ref: '#/components/schemas/DocenteErrorResponse'
  */
+// const getDocentes = async (req, res, next) => {
+//     try {
+//         const { search = '', ativo } = req.query;
+//         let sql = `
+//             SELECT d.id, d.utilizador_id, u.nome_completo, u.email, u.username, u.foto,
+//                    d.departamento, d.especialidade, d.grau_academico,
+//                    d.numero_funcionario, d.ativo, d.criado_em
+//             FROM docentes d
+//             INNER JOIN utilizadores u ON u.id = d.utilizador_id
+//             WHERE 1=1
+//         `;
+//         const params = [];
+//         if (search.trim() !== '') {
+//             sql += ` AND (u.nome_completo LIKE ? OR u.email LIKE ? OR d.especialidade LIKE ? OR d.departamento LIKE ?)`;
+//             const v = `%${search.trim()}%`;
+//             params.push(v, v, v, v);
+//         }
+//         if (ativo !== undefined && ativo !== '') {
+//             sql += ` AND d.ativo = ?`;
+//             params.push(ativo === '1' || ativo === 'true' || ativo === true ? 1 : 0);
+//         }
+//         sql += ` ORDER BY u.nome_completo ASC`;
+//         const [docentes] = await pool.query(sql, params);
+//         return res.status(200).json({ success: true, total: docentes.length, data: docentes });
+//     } catch (error) { next(error); }
+// };
+
 const getDocentes = async (req, res, next) => {
     try {
         const { search = '', ativo } = req.query;
+
+        const utilizadorId = Number(req.user?.id);
+        const role = String(
+            req.user?.role_nome ?? req.user?.role ?? ''
+        ).toUpperCase();
+
+        // Validar utilizador autenticado e perfil
+        if (
+            !Number.isInteger(utilizadorId) ||
+            utilizadorId <= 0 ||
+            !['ADMIN', 'DOCENTE', 'ESTUDANTE'].includes(role)
+        ) {
+            return res.status(403).json({
+                success: false,
+                message: 'Utilizador não autorizado.'
+            });
+        }
+
         let sql = `
-            SELECT d.id, d.utilizador_id, u.nome_completo, u.email, u.username, u.foto,
-                   d.departamento, d.especialidade, d.grau_academico,
-                   d.numero_funcionario, d.ativo, d.criado_em
+            SELECT
+                d.id,
+                d.utilizador_id,
+                u.nome_completo,
+                u.email,
+                u.username,
+                u.foto,
+                d.departamento,
+                d.especialidade,
+                d.grau_academico,
+                d.numero_funcionario,
+                d.ativo,
+                d.criado_em
             FROM docentes d
-            INNER JOIN utilizadores u ON u.id = d.utilizador_id
-            WHERE 1=1
+            INNER JOIN utilizadores u
+                ON u.id = d.utilizador_id
+            WHERE 1 = 1
         `;
+
         const params = [];
-        if (search.trim() !== '') {
-            sql += ` AND (u.nome_completo LIKE ? OR u.email LIKE ? OR d.especialidade LIKE ? OR d.departamento LIKE ?)`;
-            const v = `%${search.trim()}%`;
-            params.push(v, v, v, v);
+
+        // DOCENTE: consultar apenas os próprios dados
+        if (role === 'DOCENTE') {
+            sql += ` AND d.utilizador_id = ?`;
+            params.push(utilizadorId);
         }
-        if (ativo !== undefined && ativo !== '') {
+
+        // ESTUDANTE: consultar apenas docentes das suas
+        // orientações ativas
+        if (role === 'ESTUDANTE') {
+            sql += `
+                AND EXISTS (
+                    SELECT 1
+                    FROM orientacoes o
+                    INNER JOIN estudantes e
+                        ON e.id = o.estudante_id
+                    WHERE o.docente_id = d.id
+                      AND e.utilizador_id = ?
+                      AND o.estado = 'ATIVA'
+                )
+            `;
+            params.push(utilizadorId);
+        }
+
+        // Pesquisa por nome, email, especialidade ou departamento
+        if (
+            typeof search === 'string' &&
+            search.trim() !== ''
+        ) {
+            sql += `
+                AND (
+                    u.nome_completo LIKE ?
+                    OR u.email LIKE ?
+                    OR d.especialidade LIKE ?
+                    OR d.departamento LIKE ?
+                )
+            `;
+
+            const valorPesquisa = `%${search.trim()}%`;
+            params.push(
+                valorPesquisa,
+                valorPesquisa,
+                valorPesquisa,
+                valorPesquisa
+            );
+        }
+
+        // Validar o filtro de estado ativo
+        if (ativo !== undefined && String(ativo).trim() !== '') {
+            let ativoNumero;
+
+            if (
+                ativo === '1' ||
+                ativo === 'true' ||
+                ativo === true
+            ) {
+                ativoNumero = 1;
+            } else if (
+                ativo === '0' ||
+                ativo === 'false' ||
+                ativo === false
+            ) {
+                ativoNumero = 0;
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Parâmetro ativo inválido. Use 1, 0, true ou false.'
+                });
+            }
+
             sql += ` AND d.ativo = ?`;
-            params.push(ativo === '1' || ativo === 'true' || ativo === true ? 1 : 0);
+            params.push(ativoNumero);
         }
+
         sql += ` ORDER BY u.nome_completo ASC`;
+
         const [docentes] = await pool.query(sql, params);
-        return res.status(200).json({ success: true, total: docentes.length, data: docentes });
-    } catch (error) { next(error); }
+
+        return res.status(200).json({
+            success: true,
+            total: docentes.length,
+            data: docentes
+        });
+
+    } catch (error) {
+        next(error);
+    }
 };
 /**
  * @swagger

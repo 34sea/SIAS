@@ -18,15 +18,15 @@ router.use(authMiddleware);
 
 router.get(
     '/',
-    roleMiddleware('ADMIN', 'DOCENTE'),
-    permissionMiddleware('DOCUMENTOS_GERIR'),
+    // roleMiddleware('ADMIN', 'DOCENTE'),
+    // permissionMiddleware('DOCUMENTOS_GERIR'),
     getDocumentosComparacao
 );
 
 router.get(
     '/',
-    roleMiddleware('ADMIN', 'DOCENTE'),
-    permissionMiddleware('DOCUMENTOS_GERIR'),
+    // roleMiddleware('ADMIN', 'DOCENTE'),
+    // permissionMiddleware('DOCUMENTOS_GERIR'),
     getDocumentoComparacaoById
 );
 

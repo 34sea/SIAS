@@ -74,6 +74,8 @@ module.exports = (req, res, next) => {
     // Rotas que não precisam de autenticação
     const publicRoutes = [
         { method: 'POST', path: '/api/users' },
+        // { method: 'GET', path: '/api/orientacoes' },
+        // { method: 'GET', path: '/api/analises' },
     ];
 
     // Usa originalUrl para identificar o caminho completo

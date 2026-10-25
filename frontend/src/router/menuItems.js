@@ -42,18 +42,18 @@ export const menuItems = [
                 to: '/orientacoes',
                 roles: ADMIN_DOCENTE
             },
-            {
-                label: 'Relatórios',
-                icon: 'pi pi-fw pi-chart-bar',
-                to: '/relatorios',
-                roles: ADMIN_DOCENTE
-            },
-            {
-                label: 'Notificações',
-                icon: 'pi pi-fw pi-bell',
-                to: '/notificacoes',
-                roles: ALL_ROLES
-            }
+            // {
+            //     label: 'Relatórios',
+            //     icon: 'pi pi-fw pi-chart-bar',
+            //     to: '/relatorios',
+            //     roles: ADMIN_DOCENTE
+            // },
+            // {
+            //     label: 'Notificações',
+            //     icon: 'pi pi-fw pi-bell',
+            //     to: '/notificacoes',
+            //     roles: ALL_ROLES
+            // }
         ]
     },
     {
@@ -62,7 +62,7 @@ export const menuItems = [
         items: [
             {
                 label: 'Cursos',
-                icon: 'pi pi-fw pi-book',
+                icon: 'pi pi-fw pi-address-book',
                 to: '/cursos',
                 roles: ADMIN_ONLY
             },
@@ -104,17 +104,17 @@ export const menuItems = [
             }
         ]
     },
-    {
-        label: 'Conta',
-        items: [
-            {
-                label: 'Meu perfil',
-                icon: 'pi pi-fw pi-id-card',
-                to: '/user/profile',
-                roles: ALL_ROLES
-            }
-        ]
-    }
+    // {
+    //     label: 'Conta',
+    //     items: [
+    //         {
+    //             label: 'Meu perfil',
+    //             icon: 'pi pi-fw pi-id-card',
+    //             to: '/user/profile',
+    //             roles: ALL_ROLES
+    //         }
+    //     ]
+    // }
 ];
 
 export function getMenuByRole() {

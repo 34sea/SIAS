@@ -527,7 +527,7 @@ async function arquivarMonografia(id) {
         </Dialog>
 
         <!-- Diálogo de Histórico e Versões -->
-        <Dialog v-model:visible="showVersoes" :header="`Histórico de Versões — ${monografiaSelecionada?.titulo || ''}`" modal
+        <Dialog v-model:visible="showVersoes" :header="`Histórico de Versões`" modal
             :style="{ width: 'min(95vw, 750px)' }">
             <div class="flex flex-col gap-4">
                 <div class="upload-versao-box border rounded-xl p-4 bg-slate-50 border-slate-200">

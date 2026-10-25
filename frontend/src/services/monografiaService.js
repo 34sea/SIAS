@@ -24,11 +24,42 @@ export const monografiaService = {
         const { data } = await monografiasApi.versaoList(monografiaId);
         return data;
     },
+    // async submeterVersao(monografiaId, formData) {
+    //     console.log(`Id da monografia ${monografiaId}`)
+    //     const config = {
+    //         headers: { 'Content-Type': 'multipart/form-data' },
+    //     };
+    //     const { data } = await monografiasApi.versaoCreate(monografiaId, formData, config);
+    //     return data;
+    // },
+
     async submeterVersao(monografiaId, formData) {
+        const utilizador = JSON.parse(
+            localStorage.getItem('sias_user') || '{}'
+        );
+
+        console.log('ID da monografia:', monografiaId);
+        console.log('ID do utilizador:', utilizador.id);
+
+        // formData.append('submetido_por', "4");
+        formData.append('submetido_por', String(utilizador.id));
+
+        for (const [chave, valor] of formData.entries()) {
+            console.log(`${chave}:`, valor);
+        }
+
         const config = {
-            headers: { 'Content-Type': 'multipart/form-data' },
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
         };
-        const { data } = await monografiasApi.versaoCreate(monografiaId, formData, config);
+
+        const { data } = await monografiasApi.versaoCreate(
+            monografiaId,
+            formData,
+            config
+        );
+
         return data;
     },
     async arquivar(id) {

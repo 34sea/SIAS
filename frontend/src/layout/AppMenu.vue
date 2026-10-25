@@ -83,31 +83,26 @@ const model = [
                 label: 'Análises',
                 icon: 'pi pi-fw pi-chart-bar',
                 to: '/analises',
-                roles: roles.DOCENTE
-            },
-            {
-                label: 'Relatórios',
-                icon: 'pi pi-fw pi-file-pdf',
-                to: '/relatorios',
-                roles: roles.DOCENTE
-            },
-            {
-                label: 'Notificações',
-                icon: 'pi pi-fw pi-bell',
-                to: '/notificacoes',
                 roles: roles.TODOS
             },
-            {
-                label: 'Orientações',
-                icon: 'pi pi-fw pi-sitemap',
-                to: '/orientacoes',
-                roles: roles.DOCENTE
-            },
+            // {
+            //     label: 'Relatórios',
+            //     icon: 'pi pi-fw pi-file-pdf',
+            //     to: '/relatorios',
+            //     roles: roles.DOCENTE
+            // },
+            // {
+            //     label: 'Notificações',
+            //     icon: 'pi pi-fw pi-bell',
+            //     to: '/notificacoes',
+            //     roles: roles.TODOS
+            // },
+           
             {
                 label: 'Documentos de Comparação',
                 icon: 'pi pi-fw pi-file',
                 to: '/documentos-comparacao',
-                roles: roles.DOCENTE
+                roles: roles.ADMIN
             }
         ]
     },
@@ -118,9 +113,15 @@ const model = [
         items: [
             {
                 label: 'Cursos',
-                icon: 'pi pi-fw pi-university',
+                icon: 'pi pi-fw pi-book',
                 to: '/cursos',
                 roles: roles.ADMIN
+            },
+             {
+                label: 'Orientações',
+                icon: 'pi pi-fw pi-sitemap',
+                to: '/orientacoes',
+                roles: roles.DOCENTE
             },
             {
                 label: 'Docentes',
@@ -154,17 +155,17 @@ const model = [
             }
         ]
     },
-    {
-        label: 'Conta',
-        items: [
-            {
-                label: 'Meu perfil',
-                icon: 'pi pi-fw pi-user',
-                to: '/user/profile',
-                roles: roles.TODOS
-            }
-        ]
-    }
+    // {
+    //     label: 'Conta',
+    //     items: [
+    //         {
+    //             label: 'Meu perfil',
+    //             icon: 'pi pi-fw pi-user',
+    //             to: '/user/profile',
+    //             roles: roles.TODOS
+    //         }
+    //     ]
+    // }
 ];
 
 const userRole = computed(() => {

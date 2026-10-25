@@ -265,36 +265,182 @@ const {
  *       401:
  *         description: Não autenticado ou token inválido.
  */
+// const getAnalises = async (req, res, next) => {
+//     try {
+//         const { search = '', estado, monografia_id } = req.query;
+//         let sql = `
+//             SELECT a.id, a.monografia_versao_id, a.iniciado_por, a.algoritmo,
+//                    a.versao_algoritmo, a.estado, a.similaridade_geral,
+//                    a.classificacao, a.data_inicio, a.data_conclusao,
+//                    a.erro_mensagem, a.criado_em,
+//                    mv.numero_versao, m.titulo AS monografia_titulo,
+//                    u.nome_completo AS estudante_nome
+//             FROM analises a
+//             INNER JOIN monografia_versoes mv ON mv.id = a.monografia_versao_id
+//             INNER JOIN monografias m ON m.id = mv.monografia_id
+//             INNER JOIN estudantes e ON e.id = m.estudante_id
+//             INNER JOIN utilizadores u ON u.id = e.utilizador_id
+//             WHERE 1=1
+//         `;
+//         const params = [];
+//         if (search.trim() !== '') {
+//             sql += ` AND (m.titulo LIKE ? OR u.nome_completo LIKE ?)`;
+//             const v = `%${search.trim()}%`;
+//             params.push(v, v);
+//         }
+//         if (estado) { sql += ` AND a.estado = ?`; params.push(estado); }
+//         if (monografia_id) { sql += ` AND m.id = ?`; params.push(monografia_id); }
+//         sql += ` ORDER BY a.criado_em DESC`;
+//         const [analises] = await pool.query(sql, params);
+//         return res.status(200).json({ success: true, total: analises.length, data: analises });
+//     } catch (error) { next(error); }
+// };
 const getAnalises = async (req, res, next) => {
     try {
         const { search = '', estado, monografia_id } = req.query;
-        let sql = `
-            SELECT a.id, a.monografia_versao_id, a.iniciado_por, a.algoritmo,
-                   a.versao_algoritmo, a.estado, a.similaridade_geral,
-                   a.classificacao, a.data_inicio, a.data_conclusao,
-                   a.erro_mensagem, a.criado_em,
-                   mv.numero_versao, m.titulo AS monografia_titulo,
-                   u.nome_completo AS estudante_nome
-            FROM analises a
-            INNER JOIN monografia_versoes mv ON mv.id = a.monografia_versao_id
-            INNER JOIN monografias m ON m.id = mv.monografia_id
-            INNER JOIN estudantes e ON e.id = m.estudante_id
-            INNER JOIN utilizadores u ON u.id = e.utilizador_id
-            WHERE 1=1
-        `;
-        const params = [];
-        if (search.trim() !== '') {
-            sql += ` AND (m.titulo LIKE ? OR u.nome_completo LIKE ?)`;
-            const v = `%${search.trim()}%`;
-            params.push(v, v);
+
+        const utilizadorId = Number(req.user?.id);
+        const role = String(
+            req.user?.role_nome ?? req.user?.role ?? ''
+        ).toUpperCase();
+
+        // Validar utilizador autenticado e perfil
+        if (
+            !Number.isInteger(utilizadorId) ||
+            utilizadorId <= 0 ||
+            !['ADMIN', 'DOCENTE', 'ESTUDANTE'].includes(role)
+        ) {
+            return res.status(403).json({
+                success: false,
+                message: 'Utilizador não autorizado.'
+            });
         }
-        if (estado) { sql += ` AND a.estado = ?`; params.push(estado); }
-        if (monografia_id) { sql += ` AND m.id = ?`; params.push(monografia_id); }
+
+        let sql = `
+            SELECT
+                a.id,
+                a.monografia_versao_id,
+                a.iniciado_por,
+                a.algoritmo,
+                a.versao_algoritmo,
+                a.estado,
+                a.similaridade_geral,
+                a.classificacao,
+                a.data_inicio,
+                a.data_conclusao,
+                a.erro_mensagem,
+                a.criado_em,
+                mv.numero_versao,
+                m.id AS monografia_id,
+                m.titulo AS monografia_titulo,
+                u.nome_completo AS estudante_nome
+            FROM analises a
+            INNER JOIN monografia_versoes mv
+                ON mv.id = a.monografia_versao_id
+            INNER JOIN monografias m
+                ON m.id = mv.monografia_id
+            INNER JOIN estudantes e
+                ON e.id = m.estudante_id
+            INNER JOIN utilizadores u
+                ON u.id = e.utilizador_id
+            WHERE 1 = 1
+        `;
+
+        const params = [];
+
+        // Restringir resultados de acordo com o perfil
+        if (role === 'ESTUDANTE') {
+            sql += ` AND e.utilizador_id = ?`;
+            params.push(utilizadorId);
+        }
+
+        if (role === 'DOCENTE') {
+            sql += `
+                AND EXISTS (
+                    SELECT 1
+                    FROM orientacoes o
+                    INNER JOIN docentes d
+                        ON d.id = o.docente_id
+                    WHERE o.estudante_id = m.estudante_id
+                      AND d.utilizador_id = ?
+                      AND o.estado = 'ATIVA'
+                )
+            `;
+            params.push(utilizadorId);
+        }
+
+        // Pesquisa por título da monografia ou nome do estudante
+        if (
+            typeof search === 'string' &&
+            search.trim() !== ''
+        ) {
+            sql += `
+                AND (
+                    m.titulo LIKE ?
+                    OR u.nome_completo LIKE ?
+                )
+            `;
+
+            const valorPesquisa = `%${search.trim()}%`;
+            params.push(valorPesquisa, valorPesquisa);
+        }
+
+        // Validar e filtrar pelo estado da análise
+        if (estado !== undefined && String(estado).trim() !== '') {
+            const estadosPermitidos = [
+                'PENDENTE',
+                'EM_PROCESSAMENTO',
+                'CONCLUIDA',
+                'ERRO'
+            ];
+
+            if (!estadosPermitidos.includes(estado)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Estado da análise inválido.'
+                });
+            }
+
+            sql += ` AND a.estado = ?`;
+            params.push(estado);
+        }
+
+        // Validar e filtrar pelo ID da monografia
+        if (
+            monografia_id !== undefined &&
+            String(monografia_id).trim() !== ''
+        ) {
+            const monografiaIdNumero = Number(monografia_id);
+
+            if (
+                !Number.isInteger(monografiaIdNumero) ||
+                monografiaIdNumero <= 0
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'ID da monografia inválido.'
+                });
+            }
+
+            sql += ` AND m.id = ?`;
+            params.push(monografiaIdNumero);
+        }
+
         sql += ` ORDER BY a.criado_em DESC`;
+
         const [analises] = await pool.query(sql, params);
-        return res.status(200).json({ success: true, total: analises.length, data: analises });
-    } catch (error) { next(error); }
+
+        return res.status(200).json({
+            success: true,
+            total: analises.length,
+            data: analises
+        });
+
+    } catch (error) {
+        next(error);
+    }
 };
+
 /**
  * @swagger
  * /api/analises/{id}:

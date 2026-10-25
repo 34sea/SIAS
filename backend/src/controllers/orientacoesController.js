@@ -146,9 +146,101 @@ const pool = require('../config/db');
  *         description: Não autenticado ou token inválido.
  */
 
+// const getOrientacoes = async (req, res, next) => {
+//     try {
+//         const { estudante_id, docente_id, estado } = req.query;
+
+//         let sql = `
+//             SELECT
+//                 o.id,
+//                 o.estudante_id,
+//                 o.docente_id,
+
+//                 -- Dados do estudante
+//                 ue.nome_completo AS estudante_nome,
+//                 ue.email AS estudante_email,
+//                 ue.foto AS estudante_foto,
+
+//                 -- Dados do curso do estudante
+//                 c.id AS curso_id,
+//                 c.nome AS curso_nome,
+
+//                 -- Dados do docente
+//                 ud.nome_completo AS docente_nome,
+//                 ud.email AS docente_email,
+//                 ud.foto AS docente_foto,
+
+//                 -- Dados da orientação
+//                 o.data_inicio,
+//                 o.data_fim,
+//                 o.estado,
+//                 o.observacoes,
+//                 o.criado_em
+
+//             FROM orientacoes o
+
+//             INNER JOIN estudantes e
+//                 ON e.id = o.estudante_id
+
+//             INNER JOIN utilizadores ue
+//                 ON ue.id = e.utilizador_id
+
+//             INNER JOIN cursos c
+//                 ON c.id = e.curso_id
+
+//             INNER JOIN docentes d
+//                 ON d.id = o.docente_id
+
+//             INNER JOIN utilizadores ud
+//                 ON ud.id = d.utilizador_id
+
+//             WHERE 1=1
+//         `;
+
+//         const params = [];
+
+//         if (estudante_id) {
+//             sql += ` AND o.estudante_id = ?`;
+//             params.push(estudante_id);
+//         }
+
+//         if (docente_id) {
+//             sql += ` AND o.docente_id = ?`;
+//             params.push(docente_id);
+//         }
+
+//         if (estado) {
+//             sql += ` AND o.estado = ?`;
+//             params.push(estado);
+//         }
+
+//         sql += ` ORDER BY o.criado_em DESC`;
+
+//         const [orientacoes] = await pool.query(sql, params);
+
+//         return res.status(200).json({
+//             success: true,
+//             total: orientacoes.length,
+//             data: orientacoes
+//         });
+
+//     } catch (error) {
+//         next(error);
+//     }
+// };
+
 const getOrientacoes = async (req, res, next) => {
     try {
         const { estudante_id, docente_id, estado } = req.query;
+
+        // Dados definidos pelo middleware JWT após validar o token.
+        const utilizadorId = Number(req.user?.id);
+
+        const role = String(
+            req.user?.role_nome ?? req.user?.role ?? ''
+        ).toUpperCase();
+
+    
 
         let sql = `
             SELECT
@@ -161,7 +253,7 @@ const getOrientacoes = async (req, res, next) => {
                 ue.email AS estudante_email,
                 ue.foto AS estudante_foto,
 
-                -- Dados do curso do estudante
+                -- Dados do curso
                 c.id AS curso_id,
                 c.nome AS curso_nome,
 
@@ -194,25 +286,111 @@ const getOrientacoes = async (req, res, next) => {
             INNER JOIN utilizadores ud
                 ON ud.id = d.utilizador_id
 
-            WHERE 1=1
+            WHERE 1 = 1
         `;
 
         const params = [];
 
-        if (estudante_id) {
+        // ==========================================
+        // 1. RESTRIÇÃO OBRIGATÓRIA POR ROLE
+        // ==========================================
+
+        if (role === 'ESTUDANTE') {
+            // Apenas orientações do estudante autenticado.
+            sql += `
+                AND e.utilizador_id = ?
+            `;
+
+            params.push(utilizadorId);
+        }
+
+        if (role === 'DOCENTE') {
+            // Apenas orientações do docente autenticado.
+            sql += `
+                AND d.utilizador_id = ?
+            `;
+
+            params.push(utilizadorId);
+        }
+
+        // ADMIN pode consultar todas as orientações.
+
+        // ==========================================
+        // 2. FILTRO POR ESTUDANTE
+        // ==========================================
+
+        if (
+            estudante_id !== undefined &&
+            String(estudante_id).trim() !== ''
+        ) {
+            const estudanteIdNumero = Number(estudante_id);
+
+            if (
+                !Number.isInteger(estudanteIdNumero) ||
+                estudanteIdNumero <= 0
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'ID do estudante inválido.'
+                });
+            }
+
             sql += ` AND o.estudante_id = ?`;
-            params.push(estudante_id);
+            params.push(estudanteIdNumero);
         }
 
-        if (docente_id) {
+        // ==========================================
+        // 3. FILTRO POR DOCENTE
+        // ==========================================
+
+        if (
+            docente_id !== undefined &&
+            String(docente_id).trim() !== ''
+        ) {
+            const docenteIdNumero = Number(docente_id);
+
+            if (
+                !Number.isInteger(docenteIdNumero) ||
+                docenteIdNumero <= 0
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'ID do docente inválido.'
+                });
+            }
+
             sql += ` AND o.docente_id = ?`;
-            params.push(docente_id);
+            params.push(docenteIdNumero);
         }
 
-        if (estado) {
+        // ==========================================
+        // 4. FILTRO POR ESTADO
+        // ==========================================
+
+        if (
+            estado !== undefined &&
+            String(estado).trim() !== ''
+        ) {
+            const estadosPermitidos = [
+                'ATIVA',
+                'CONCLUIDA',
+                'CANCELADA'
+            ];
+
+            if (!estadosPermitidos.includes(estado)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Estado da orientação inválido.'
+                });
+            }
+
             sql += ` AND o.estado = ?`;
             params.push(estado);
         }
+
+        // ==========================================
+        // 5. EXECUÇÃO
+        // ==========================================
 
         sql += ` ORDER BY o.criado_em DESC`;
 

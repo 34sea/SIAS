@@ -16,15 +16,15 @@ router.use(authMiddleware);
 
 router.get(
     '/',
-    roleMiddleware('ADMIN', 'DOCENTE'),
-    permissionMiddleware('ANALISES_VISUALIZAR'),
+    // roleMiddleware('ADMIN', 'DOCENTE'),
+    // permissionMiddleware('ANALISES_VISUALIZAR'),
     getAnalises
 );
 
 router.get(
     '/:id',
-    roleMiddleware('ADMIN', 'DOCENTE', 'ESTUDANTE'),
-    permissionMiddleware('ANALISES_VISUALIZAR'),
+    // roleMiddleware('ADMIN', 'DOCENTE', 'ESTUDANTE'),
+    // permissionMiddleware('ANALISES_VISUALIZAR'),
     getAnaliseById
 );
 

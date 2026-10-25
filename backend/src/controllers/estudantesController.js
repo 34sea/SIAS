@@ -129,36 +129,186 @@ const pool = require('../config/db');
  *         description: Não autenticado ou token inválido.
  */
 
+// const getEstudantes = async (req, res, next) => {
+//     try {
+//         const { search = '', curso_id, ativo } = req.query;
+//         let sql = `
+//             SELECT e.id, e.utilizador_id, u.nome_completo, u.email, u.username, u.foto,
+//                    e.curso_id, c.nome AS curso_nome, e.numero_estudante,
+//                    e.ano_ingresso, e.ativo, e.criado_em
+//             FROM estudantes e
+//             INNER JOIN utilizadores u ON u.id = e.utilizador_id
+//             INNER JOIN cursos c ON c.id = e.curso_id
+//             WHERE 1=1
+//         `;
+//         const params = [];
+//         if (search.trim() !== '') {
+//             sql += ` AND (u.nome_completo LIKE ? OR u.email LIKE ? OR e.numero_estudante LIKE ?)`;
+//             const v = `%${search.trim()}%`;
+//             params.push(v, v, v);
+//         }
+//         if (curso_id) {
+//             sql += ` AND e.curso_id = ?`;
+//             params.push(curso_id);
+//         }
+//         if (ativo !== undefined && ativo !== '') {
+//             sql += ` AND e.ativo = ?`;
+//             params.push(ativo === '1' || ativo === 'true' || ativo === true ? 1 : 0);
+//         }
+//         sql += ` ORDER BY u.nome_completo ASC`;
+//         const [estudantes] = await pool.query(sql, params);
+//         return res.status(200).json({ success: true, total: estudantes.length, data: estudantes });
+//     } catch (error) { next(error); }
+// };
 const getEstudantes = async (req, res, next) => {
     try {
         const { search = '', curso_id, ativo } = req.query;
+
+        const utilizadorId = Number(req.user?.id);
+        const role = String(
+            req.user?.role_nome ?? req.user?.role ?? ''
+        ).toUpperCase();
+
+        // Validar utilizador autenticado e perfil
+        if (
+            !Number.isInteger(utilizadorId) ||
+            utilizadorId <= 0 ||
+            !['ADMIN', 'DOCENTE', 'ESTUDANTE'].includes(role)
+        ) {
+            return res.status(403).json({
+                success: false,
+                message: 'Utilizador não autorizado.'
+            });
+        }
+
         let sql = `
-            SELECT e.id, e.utilizador_id, u.nome_completo, u.email, u.username, u.foto,
-                   e.curso_id, c.nome AS curso_nome, e.numero_estudante,
-                   e.ano_ingresso, e.ativo, e.criado_em
+            SELECT
+                e.id,
+                e.utilizador_id,
+                u.nome_completo,
+                u.email,
+                u.username,
+                u.foto,
+                e.curso_id,
+                c.nome AS curso_nome,
+                e.numero_estudante,
+                e.ano_ingresso,
+                e.ativo,
+                e.criado_em
             FROM estudantes e
-            INNER JOIN utilizadores u ON u.id = e.utilizador_id
-            INNER JOIN cursos c ON c.id = e.curso_id
-            WHERE 1=1
+            INNER JOIN utilizadores u
+                ON u.id = e.utilizador_id
+            INNER JOIN cursos c
+                ON c.id = e.curso_id
+            WHERE 1 = 1
         `;
+
         const params = [];
-        if (search.trim() !== '') {
-            sql += ` AND (u.nome_completo LIKE ? OR u.email LIKE ? OR e.numero_estudante LIKE ?)`;
-            const v = `%${search.trim()}%`;
-            params.push(v, v, v);
+
+        // ESTUDANTE: consultar apenas os próprios dados
+        if (role === 'ESTUDANTE') {
+            sql += ` AND e.utilizador_id = ?`;
+            params.push(utilizadorId);
         }
-        if (curso_id) {
+
+        // DOCENTE: consultar apenas estudantes com orientação ativa
+        if (role === 'DOCENTE') {
+            sql += `
+                AND EXISTS (
+                    SELECT 1
+                    FROM orientacoes o
+                    INNER JOIN docentes d
+                        ON d.id = o.docente_id
+                    WHERE o.estudante_id = e.id
+                      AND d.utilizador_id = ?
+                      AND o.estado = 'ATIVA'
+                )
+            `;
+            params.push(utilizadorId);
+        }
+
+        // Pesquisa por nome, email ou número de estudante
+        if (
+            typeof search === 'string' &&
+            search.trim() !== ''
+        ) {
+            sql += `
+                AND (
+                    u.nome_completo LIKE ?
+                    OR u.email LIKE ?
+                    OR e.numero_estudante LIKE ?
+                )
+            `;
+
+            const valorPesquisa = `%${search.trim()}%`;
+            params.push(
+                valorPesquisa,
+                valorPesquisa,
+                valorPesquisa
+            );
+        }
+
+        // Validar e aplicar filtro por curso
+        if (
+            curso_id !== undefined &&
+            String(curso_id).trim() !== ''
+        ) {
+            const cursoIdNumero = Number(curso_id);
+
+            if (
+                !Number.isInteger(cursoIdNumero) ||
+                cursoIdNumero <= 0
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'ID do curso inválido.'
+                });
+            }
+
             sql += ` AND e.curso_id = ?`;
-            params.push(curso_id);
+            params.push(cursoIdNumero);
         }
-        if (ativo !== undefined && ativo !== '') {
+
+        // Validar e aplicar filtro de estado ativo
+        if (ativo !== undefined && String(ativo).trim() !== '') {
+            let ativoNumero;
+
+            if (
+                ativo === '1' ||
+                ativo === 'true' ||
+                ativo === true
+            ) {
+                ativoNumero = 1;
+            } else if (
+                ativo === '0' ||
+                ativo === 'false' ||
+                ativo === false
+            ) {
+                ativoNumero = 0;
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Parâmetro ativo inválido. Use 1, 0, true ou false.'
+                });
+            }
+
             sql += ` AND e.ativo = ?`;
-            params.push(ativo === '1' || ativo === 'true' || ativo === true ? 1 : 0);
+            params.push(ativoNumero);
         }
+
         sql += ` ORDER BY u.nome_completo ASC`;
+
         const [estudantes] = await pool.query(sql, params);
-        return res.status(200).json({ success: true, total: estudantes.length, data: estudantes });
-    } catch (error) { next(error); }
+
+        return res.status(200).json({
+            success: true,
+            total: estudantes.length,
+            data: estudantes
+        });
+
+    } catch (error) {
+        next(error);
+    }
 };
 
 /**
